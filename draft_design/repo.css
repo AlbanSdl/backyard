@@ -1,0 +1,212 @@
+body, html{
+    background-color: #222;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    color: #fff;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-weight: 300
+}
+.appContainer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    width: 100vW;
+    height: 100vH;
+}
+.containerHeader {
+    font-size: 40px;
+    padding: 20px 0;
+    text-align: center;
+    flex: 0 0 auto;
+    font-weight: 200;
+    text-align: center;
+    width: 100vW;
+}
+.overlay {
+    border-bottom: #fff 1px solid;
+}
+.containerContents {
+    flex: 4 2 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+.networkList {
+    flex: 2 0 auto;
+    max-width: 400px;
+}
+.verticalList {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    flex: 2 0 auto;
+    padding: 10px 10px 0 10px;
+}
+.repoDetails {
+    display: table;
+    table-layout: auto;
+    flex: 4 2 500px;
+    min-width: 500px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+svg.branch {
+    position: absolute;
+}
+.commit {
+    display: table-row;
+}
+.commit>*{
+    display: table-cell;
+}
+.commit>.icon>.circle {
+    height: 1px;
+    width: 1px;
+    border-radius: 50%;
+    border: 5px solid #2AD500;
+}
+.repoBranches {
+    display: flex;
+    flex: 1 0 15px;
+}
+.listHeader {
+    font-size: 20px;
+    padding: 10px 10px 10px 0;
+}
+.menuBar {
+    font-size: 16px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+.menuItem {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    padding: 0 10px;
+}
+.menuItem>* {
+    margin: auto;
+    text-align: center;
+}
+
+/*
+ * Animations
+ */
+.smooth{
+    transition: all .5s ease-in-out;
+    -moz-transition: all .5s ease-in-out;
+    -webkit-transition: all .5s ease-in-out
+}
+
+/*
+ * Cards
+ */
+
+.card {
+    border: #fff 1px solid;
+    border-radius: 3px;
+    padding: 10px;
+    display: flex;
+    flex-direction: row;
+    background-color: #222;
+    margin-bottom: 10px;
+    cursor: pointer;
+    pointer-events: all;
+    user-select: none;
+}
+.card>.icon {
+    display: block;
+    width: 40px;
+    height: 40px;
+    margin: 10px;
+    flex-shrink: 0;
+}
+.card>.details>.name {
+    font-size: 18px;
+}
+.card>.details>.description {
+    font-size: 16px;
+    font-style: italic;
+    color: #888;
+}
+.card>.details {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    flex: 4 2 auto;
+    margin: 0 10px;
+}
+.card:hover {
+    border-color: #2287fa;
+    background-color: #272727;
+    color: #2287fa;
+}
+.card:hover>.details>.description {
+    color: #2287fa;
+}
+.card:hover>.icon>path {
+    stroke: #2287fa;
+    animation: iconHover .5s ease-in-out forwards;
+}
+@keyframes iconHover {
+    0% {
+        stroke-width: 1;
+    }
+    80% {
+        stroke-width: .5;
+        fill: transparent;
+    }
+    100% {
+        stroke-dashoffset: 0;
+        stroke-width: .5;
+        fill: transparent;
+    }
+}
+
+/*
+ * AppBar
+ */
+.appBar {
+    width: 100vW;
+    height: 24px;
+    background: #111;
+}
+.appBar>.title {
+    float: left;
+    font-weight: 700;
+    padding-left: 5px;
+}
+.status {
+    float: right;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+.windowIcon {
+    height: 18px;
+    width: 18px;
+    margin: 2px;
+    border-radius: 50%;
+    background: #555;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    cursor: pointer;
+}
+.resize {
+    background-image: url("../src/resources/icons/fullscreen_exit.svg");
+    background-color: #2AD500;
+}
+.minimize {
+    background-image: url("../src/resources/icons/minimize.svg");
+    background-color: #FA0;
+    background-position-y: -2px;
+}
+.close {
+    background-image: url("../src/resources/icons/close.svg");
+    background-color: #F00;
+}

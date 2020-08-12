@@ -1,0 +1,26 @@
+{
+  "name": "backyard",
+  "version": "0.0.1",
+  "description": "A modern git GUI",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlbanSdl/backyard.git"
+  },
+  "author": "AlbanSdl",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/AlbanSdl/backyard/issues"
+  },
+  "homepage": "https://github.com/AlbanSdl/backyard#readme",
+  "devDependencies": {
+    "electron": "^9.2.0"
+  },
+  "dependencies": {
+    "electron-store": "^6.0.0",
+    "nodegit": "^0.27.0"
+  }
+}
