@@ -1,7 +1,7 @@
 const { app, BrowserWindow } = require("electron");
 const { AppNotification } = require("./src/app/Notification");
 const { i18n } = require("./src/app/i18n");
-const { ipc } = require("./src/app/Ipc");
+const { IPC } = require("./src/app/Ipc");
 const Store = require("electron-store");
 const settings = new Store();
 
@@ -26,7 +26,7 @@ class Backyard {
         this.window.menuBarVisible = false;
         this.window.loadFile('./src/view/index.html');
         this.window.on("closed", () => this.window = null);
-        ipc(this);
+        new IPC(this);
 
         new AppNotification("editor.notification.test.title", "editor.notification.test.content", false, "./src/resources/icon.png", null);
 

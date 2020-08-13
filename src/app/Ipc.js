@@ -2,58 +2,113 @@ const { ipcMain, dialog, app } = require("electron");
 const Store = require("electron-store");
 const settings = new Store();
 const git = require('nodegit');
+const { sep } = require("path");
 
-function setupIpcMain(backyard) {
-    ipcMain.on("lifecycle", (event, status, arg1, arg2) => {
-        if (status === "init") {
-            const repoPath = settings.get("editor.currentPath");
-            if (repoPath != null)
-                git.Repository.open(repoPath).catch((reason) => event.reply("error", reason)).then((repo) => event.reply(repo.path()));
-            else
-                event.reply("lifecycle", "mainMenu");
-        } else if (status === "queryRecents") {
-            const arr = new Array();
-            for (let i = 0; i < 9; i++) {
-                const name = settings.get(`editor.recents.${i}.name`);
-                const path = settings.get(`editor.recents.${i}.path`);
-                if (name != null && path != null) {
-                    arr.push(name);
-                    arr.push(path);
+class IPC {
+
+    constructor(backyard) {
+        this.backyard = backyard;
+        this.init();
+        this.repo = null;
+    }
+
+    init() {
+        ipcMain.on("lifecycle", (event, status, ...args) => {
+            if (status === "init") {
+                const repoPath = settings.get("editor.currentPath");
+                if (repoPath != null)
+                    this.openRepository(repoPath, event);
+                else
+                    event.reply("lifecycle", "mainMenu");
+            } else if (status === "queryRecents") {
+                const arr = new Array();
+                for (let i = 0; i < 9; i++) {
+                    const name = settings.get(`editor.recents.${i}.name`);
+                    const path = settings.get(`editor.recents.${i}.path`);
+                    if (name != null && path != null) {
+                        arr.push(name);
+                        arr.push(path);
+                    }
                 }
                 event.returnValue = arr;
-            }
-        } else if (status === "addRecent") {
-            for (let i = 0; i < 8; i++) {
-                const name = settings.get(`editor.recents.${i}.name`);
-                const path = settings.get(`editor.recents.${i}.path`);
-                if (name != null && path != null) {
-                    settings.set(`editor.recents.${i + 1}.name`, name);
-                    settings.set(`editor.recents.${i + 1}.path`, path);
+            } else if (status === "openRepoSelector") {
+                const answer = dialog.showOpenDialogSync(this.backyard.window, {
+                    title: this.backyard.i18n.getLocaleString("editor.app.repo.choose.title"),
+                    defaultPath: app.getPath("home"),
+                    buttonLabel: this.backyard.i18n.getLocaleString("editor.app.repo.choose.confirm"),
+                    properties: [
+                        "openDirectory",
+                        "showHiddenFiles",
+                        "createDirectory",
+                        "promptToCreate"
+                    ]
+                });
+                if (answer != null && answer.length > 0)
+                    this.openRepository(answer[0], event);
+            } else if (status === "loadRecent") {
+                if (args.length > 0) {
+                    this.openRepository(settings.get(`editor.recents.${args[0]}.path`), event);
+                } else {
+                    event.reply("error", "error.load.from_recents");
                 }
-                settings.set(`editor.recents.0.path`, arg1);
-                settings.set(`editor.recents.0.name`, arg2);
-            }
-        } else if (status === "openRepoSelector") {
-            console.log(dialog.showOpenDialogSync(backyard.window, {
-                title: backyard.i18n.getLocaleString("editor.app.repo.choose.title"),
-                defaultPath: app.getPath("home"),
-                buttonLabel: backyard.i18n.getLocaleString("editor.app.repo.choose.confirm"),
-                properties: [
-                    "openDirectory",
-                    "showHiddenFiles",
-                    "createDirectory",
-                    "promptToCreate"
-                ]
-            }))
-        } else if (status === "exitApp") {
-            backyard.window.close();
-        } else
-            event.reply("error", "Event not understood");
-    })
+            } else if (status === "closeRepo") {
+                settings.delete("editor.currentPath");
+                this.repo = null;
+                event.reply("lifecycle", "mainMenu");
+            } else if (status === "exitApp") {
+                this.backyard.window.close();
+            } else
+                event.reply("error", this.getLocaleString("error.ipc.unknown_action"));
+        })
+    
+        ipcMain.on("localeString", (event, id) => {
+            event.returnValue = this.getLocaleString(id);
+        })
+    }
 
-    ipcMain.on("localeString", (event, id) => {
-        event.returnValue = backyard.i18n.getLocaleString(id);
-    })
+    getLocaleString(id) {
+        return this.backyard.i18n.getLocaleString(id);
+    }
+
+    openRepository(path, event) {
+        try {
+            const regexp = new RegExp("^.*\\" + sep + "(.+?)$", "mug");
+            const repoName = regexp.exec(path)[1];
+            git.Repository.open(path).catch((reason) => event.reply("error", reason)).then((repo) => {
+                if (repo != null && repoName != null) {
+                    this.repo = repo;
+                    this.addRecent(path, repoName);
+                    settings.set("editor.currentPath", path);
+                    event.reply("lifecycle", "openRepo", path, repoName);
+                }
+            });
+        } catch (ex) {
+            event.reply("error", this.getLocaleString("error.loading.invalid.path"))
+        }
+    }
+
+    addRecent(repoPath, repoName) {
+        let max = 8;
+        for (let i = 0; i < 8; i++) {
+            const name = settings.get(`editor.recents.${i}.name`);
+            const path = settings.get(`editor.recents.${i}.path`);
+            if (name === null || path === null || (name === repoName && path === repoPath)) {
+                max = i;
+                break;
+            }
+        }
+        for (let i = max; i > 0; i--) {
+            const name = settings.get(`editor.recents.${i - 1}.name`);
+            const path = settings.get(`editor.recents.${i - 1}.path`);
+            if (name != null && path != null) {
+                settings.set(`editor.recents.${i}.name`, name);
+                settings.set(`editor.recents.${i}.path`, path);
+            }
+        }
+        settings.set(`editor.recents.0.path`, repoPath);
+        settings.set(`editor.recents.0.name`, repoName);
+    }
+
 }
 
-module.exports.ipc = setupIpcMain;
+module.exports.IPC = IPC;
