@@ -300,11 +300,13 @@ footer .copy{color:#fff;text-align:center}
     background: #111;
     z-index: 10;
     position: fixed;
+    -webkit-app-region: drag;
 }
 .appBar>.title {
     float: left;
     font-weight: 700;
     padding-left: 5px;
+    user-select: none;
 }
 .status {
     float: right;
@@ -322,10 +324,14 @@ footer .copy{color:#fff;text-align:center}
     background-size: contain;
     background-position: center;
     cursor: pointer;
+    -webkit-app-region: no-drag;
 }
-.resize {
-    background-image: url("../resources/icons/fullscreen_exit.svg");
+.maximize {
+    background-image: url("../resources/icons/fullscreen.svg");
     background-color: #2AD500;
+}
+.maximize.maximized {
+    background-image: url("../resources/icons/fullscreen_exit.svg");
 }
 .minimize {
     background-image: url("../resources/icons/minimize.svg");

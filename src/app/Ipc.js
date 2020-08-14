@@ -59,6 +59,16 @@ class IPC {
                 this.queryNetwork(event);
             } else if (status === "checkout") {
                 this.checkoutBranch(args[0], event);
+            } else if (status === "minimizeApp") {
+                this.backyard.window.minimize();
+            } else if (status === "maximizeApp") {
+                if (this.backyard.window.isMaximized()) {
+                    this.backyard.window.unmaximize();
+                    event.returnValue = false;
+                } else {
+                    this.backyard.window.maximize();
+                    event.returnValue = true;
+                }
             } else if (status === "exitApp") {
                 this.backyard.window.close();
             } else

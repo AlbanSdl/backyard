@@ -135,7 +135,7 @@ class View {
     }
 
     loadRepository(path, name) {
-
+        this.setTitle(`${this.getLocale("editor.app.title")} ${this.getLocale("editor.app.title.open")} ${name}`);
         const getActionElement = (name, iconType, onclick = () => { }) => {
             const elem = this.createElement(null, "menuItem");
             elem.innerHTML = Icon.getIcon(iconType, "icon") + `<div class="name">${name}</div>`;
@@ -272,5 +272,14 @@ window.onload = () => {
     });
     Ascript.getId("windowIconClose").addEventListener('click', () => {
         ipcRenderer.send("lifecycle", "exitApp");
+    });
+    Ascript.getId("windowIconMinimize").addEventListener('click', () => {
+        ipcRenderer.send("lifecycle", "minimizeApp");
+    });
+    Ascript.getId("windowIconMaximize").addEventListener('click', () => {
+        if (ipcRenderer.sendSync("lifecycle", "maximizeApp"))
+            Ascript.getId("windowIconMaximize").classList.add("maximized");
+        else
+            Ascript.getId("windowIconMaximize").classList.remove("maximized");
     })
 }
