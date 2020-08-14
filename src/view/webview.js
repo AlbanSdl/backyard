@@ -266,6 +266,10 @@ window.onload = () => {
             view.registerNetworkPart(args[0]);
         if (status === "executed")
             new Ascript.Notification(args[0]).setBackground("#2ad500").setDuration(2).send();
+        if (status === "maximized")
+            Ascript.getId("windowIconMaximize").classList.add("maximized");
+        if (status === "unmaximized")
+            Ascript.getId("windowIconMaximize").classList.remove("maximized");
     });
     ipcRenderer.on("error", (event, error) => {
         new Ascript.Notification(`${Icon.getIcon(Icon.ERROR, 'ic')} ${error}`).setBackground("#f00").send();
@@ -277,9 +281,6 @@ window.onload = () => {
         ipcRenderer.send("lifecycle", "minimizeApp");
     });
     Ascript.getId("windowIconMaximize").addEventListener('click', () => {
-        if (ipcRenderer.sendSync("lifecycle", "maximizeApp"))
-            Ascript.getId("windowIconMaximize").classList.add("maximized");
-        else
-            Ascript.getId("windowIconMaximize").classList.remove("maximized");
+        ipcRenderer.send("lifecycle", "maximizeApp");
     })
 }

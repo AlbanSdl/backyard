@@ -62,13 +62,10 @@ class IPC {
             } else if (status === "minimizeApp") {
                 this.backyard.window.minimize();
             } else if (status === "maximizeApp") {
-                if (this.backyard.window.isMaximized()) {
+                if (this.backyard.window.isMaximized())
                     this.backyard.window.unmaximize();
-                    event.returnValue = false;
-                } else {
+                else
                     this.backyard.window.maximize();
-                    event.returnValue = true;
-                }
             } else if (status === "exitApp") {
                 this.backyard.window.close();
             } else

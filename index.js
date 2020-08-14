@@ -22,11 +22,21 @@ class Backyard {
             show: false,
             frame: false
         });
-        this.window.maximize()
+        if (settings.get("editor.maximized", true))
+            this.window.maximize();
+        else
+            this.window.show();
         this.window.menuBarVisible = false;
         this.window.loadFile('./src/view/index.html');
         this.window.on("closed", () => this.window = null);
         new IPC(this);
+
+        this.window.on('maximize', () => {
+            this.window.webContents.send("lifecycle", "maximized");
+        })
+        this.window.on('unmaximize', () => {
+            this.window.webContents.send("lifecycle", "unmaximized")
+        })
 
         new AppNotification("editor.notification.test.title", "editor.notification.test.content", false, "./src/resources/icon.png", null);
 
