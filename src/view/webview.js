@@ -146,7 +146,7 @@ class View {
 
         this.addRecent(path, name);
 
-        // every ipc request has to be sync here
+        // Header
         this.clearView();
         const appContainer = this.createElement("appContainer", "appContainer");
         const header = this.createElement("containerHeader", "containerHeader", "overlay");
@@ -163,8 +163,45 @@ class View {
         menuBar.appendChild(getActionElement(this.getLocale("editor.bar.action.close"), Icon.CLOSE, () => ipcRenderer.send("lifecycle", "closeRepo")));
         header.appendChild(menuBar);
         appContainer.appendChild(header);
+
+        // Contents
+        const containerContents = this.createElement("containerContents", "containerContents");
+        const networkList = this.createElement("networkList", "networkList", "verticalList");
+        const localBranches = this.createElement("headsList", "list");
+        localBranches.innerText = this.getLocale("editor.git.branch.name");
+        const remotes = this.createElement("remotesList", "list");
+        remotes.innerText = this.getLocale("editor.git.remote.name");
+        const tags = this.createElement("tagsList", "list");
+        tags.innerText = this.getLocale("editor.git.tag.name");
+        const stashes = this.createElement("stashList", "list");
+        stashes.innerText = this.getLocale("editor.git.stash.name");
+        networkList.append(localBranches, remotes, tags, stashes);
+        containerContents.appendChild(networkList);
+        appContainer.appendChild(containerContents);
+
+        // request network content from ipc
+        ipcRenderer.send("lifecycle", "queryNetwork");
+
         document.getElementsByTagName("body")[0].appendChild(appContainer);
         this.setLoaded(true);
+    }
+
+    registerNetworkPart(refName) {
+        if (refName.indexOf("stash") < 0) {
+            const match = refName.match(/refs\/([^\/]+)/mu);
+            if (match == null || match.length < 1) return;
+            const listElem = document.getElementById(`${match[1]}List`);
+            if (listElem == null) return;
+            const ref = this.createElement(null, "ref");
+            ref.innerText = refName.substr(match[0].length + 1);
+            if (match[1] === "heads") {
+                ref.addEventListener('dblclick', () => {
+                    ipcRenderer.send("lifecycle", "checkout", refName);
+                });
+                Ascript.addRippleListener(ref);
+            }
+            listElem.appendChild(ref);
+        }
     }
 
     clearView(transition=TransitionEffect.FADE | TransitionEffect.SLIDE_RIGHT) {
@@ -220,11 +257,15 @@ const view = new View();
 window.onload = () => {
     Ascript.getId("loaderText").innerText = view.getLocale("editor.app.loading");
     ipcRenderer.send("lifecycle", "init");
-    ipcRenderer.on("lifecycle", (event, status, arg1, arg2) => {
+    ipcRenderer.on("lifecycle", (event, status, ...args) => {
         if (status === "mainMenu")
             view.loadMainMenu();
         if (status === "openRepo")
-            view.loadRepository(arg1, arg2);
+            view.loadRepository(args[0], args[1]);
+        if (status === "registerNetworkPart")
+            view.registerNetworkPart(args[0]);
+        if (status === "executed")
+            new Ascript.Notification(args[0]).setBackground("#2ad500").setDuration(2).send();
     });
     ipcRenderer.on("error", (event, error) => {
         new Ascript.Notification(`${Icon.getIcon(Icon.ERROR, 'ic')} ${error}`).setBackground("#f00").send();

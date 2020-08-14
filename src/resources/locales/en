@@ -1,2 +1,3 @@
 editor.menu.title Backyard
 error.ipc.unknown_action Error: unrecognized action. This is probably a bug
+editor.app.commit.date_format MM/dd/yy at hh:mm:ss

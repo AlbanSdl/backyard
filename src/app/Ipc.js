@@ -55,12 +55,16 @@ class IPC {
                 settings.delete("editor.currentPath");
                 this.repo = null;
                 event.reply("lifecycle", "mainMenu");
+            } else if (status === "queryNetwork") {
+                this.queryNetwork(event);
+            } else if (status === "checkout") {
+                this.checkoutBranch(args[0], event);
             } else if (status === "exitApp") {
                 this.backyard.window.close();
             } else
                 event.reply("error", this.getLocaleString("error.ipc.unknown_action"));
         })
-    
+
         ipcMain.on("localeString", (event, id) => {
             event.returnValue = this.getLocaleString(id);
         })
@@ -85,6 +89,21 @@ class IPC {
         } catch (ex) {
             event.reply("error", this.getLocaleString("error.loading.invalid.path"))
         }
+    }
+
+    queryNetwork(event) {
+        if (this.repo != null)
+            this.repo.getReferenceNames(git.Reference.TYPE.ALL).then((refs) => {
+                refs.forEach((refName) => {
+                    event.reply("lifecycle", "registerNetworkPart", refName);
+                })
+            })
+    }
+
+    checkoutBranch(ref, event) {
+        this.repo.checkoutBranch(ref, {
+            checkoutStrategy: git.Checkout.STRATEGY.SAFE
+        }).then(() => event.reply("lifecycle", "executed", this.getLocaleString("editor.git.checkout.complete"))).catch((err) => event.reply("error", this.getLocaleString("editor.git.checkout.error") + err));
     }
 
     addRecent(repoPath, repoName) {
