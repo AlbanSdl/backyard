@@ -68,6 +68,10 @@ class IPC {
                     this.backyard.window.maximize();
             } else if (status === "exitApp") {
                 this.backyard.window.close();
+            } else if (status === "updateGraph") {
+                this.getCommitAndStashes(args.length > 0 ? args[0] : null).then((commits) => {
+                    event.reply("lifecycle", "updateGraph", ...commits);
+                });
             } else
                 event.reply("error", this.getLocaleString("error.ipc.unknown_action"));
         })
@@ -133,6 +137,43 @@ class IPC {
         }
         settings.set(`editor.recents.0.path`, repoPath);
         settings.set(`editor.recents.0.name`, repoName);
+    }
+
+    async getCommitAndStashes(name = null) {
+        const arr = [];
+        const walker = git.Revwalk.create(this.repo);
+        walker.pushGlob(`refs/${name != null ? name : '*'}/*`);
+        walker.sorting(git.Revwalk.SORT.TOPOLOGICAL | git.Revwalk.SORT.TIME); 
+        arr.push(...(await walker.getCommitsUntil(() => true)).map(commit => ({
+            id: commit.toString(),
+            summary: commit.summary(),
+            message: commit.message(),
+            authorName: commit.author().name(),
+            authorMail: commit.author().email(),
+            committerName: commit.committer().name(),
+            committerMail: commit.committer().email(),
+            date: commit.date(),
+            parents: commit.parents().map(oid => oid.tostrS()),
+            isStash: false
+        })));
+        await git.Stash.foreach(this.repo, async (nb, message, oid) => {
+            await this.repo.getCommit(oid).then((stash) => {
+                arr.push({
+                    id: stash.toString(),
+                    stashId: nb,
+                    summary: stash.summary(),
+                    message: stash.message(),
+                    authorName: stash.author().name(),
+                    authorMail: stash.author().email(),
+                    committerName: stash.committer().name(),
+                    committerMail: stash.committer().email(),
+                    date: stash.date(),
+                    parents: stash.parents().map(oid => oid.tostrS()),
+                    isStash: true
+                });
+            });
+        });
+        return arr;
     }
 
 }

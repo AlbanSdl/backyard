@@ -1,4 +1,6 @@
 const { ipcRenderer } = require("electron");
+const { EOL } = require("os");
+const { DateFormat } = require("../app/Date");
 
 Icon = {
     FOLDER: 0,
@@ -31,12 +33,108 @@ TransitionEffect = {
     SLIDE_BOTTOM: 0x10
 }
 
+class CommitCache {
+    
+    constructor(view) {
+        this.commits = [];
+        this.view = view;
+    }
+
+    addAll(...commits) {
+        const coms = commits.map(commit => new Commit(commit, this)).filter((commit) => this.commits.filter((cm) => cm.id === commit.id).length === 0);
+        this.commits.push(...coms);
+        coms.forEach(com => com.display());
+    }
+
+    getCommit(id) {
+        const cms = this.commits.filter((commit) => commit.id === id);
+        return cms.length > 0 ? cms[0] : null;
+    }
+
+}
+
+class Commit {
+
+    constructor(raw, cache) {
+        this.commitCache = cache;
+        this.id = raw.id;
+        this.summary = raw.summary;
+        this.message = raw.message;
+        this.authorName = raw.authorName;
+        this.authorMail = raw.authorMail;
+        this.committerName = raw.committerName;
+        this.committerMail = raw.committerMail;
+        this.date = raw.date;
+        this.parents = raw.parents;
+        this.isStash = raw.isStash;
+        this.stashId = raw.stashId;
+        this.element = null;
+    }
+
+    getDescription() {
+        return this.message.split(os.EOF).splice(2).join(os.EOF);
+    }
+
+    display() {
+        if (!this.isStash) {
+            this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
+            const id = this.commitCache.view.createElement(null, "id");
+            id.innerText = this.id.substr(0, 7);
+            const message = this.commitCache.view.createElement(null, "message");
+            message.innerText = this.summary;
+            const author = this.commitCache.view.createElement(null, "author");
+            author.innerText = this.authorName;
+            const date = this.commitCache.view.createElement(null, "date");
+            date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
+            this.element.append(id, message, author, date);
+            Ascript.getId("commit-graph").appendChild(this.element);
+            this.__displayGraph();
+        } else {
+            const listElem = document.getElementById(`stashList`);
+            if (listElem == null) return;
+            const ref = this.commitCache.view.createElement(null, "ref");
+            ref.innerText = this.summary;
+            listElem.appendChild(ref);
+        }
+    }
+
+    getInherited() {
+        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id));
+    }
+
+    getParents() {
+        return this.parents.map(id => this.commitCache.getCommit(id)).filter(cm => cm != null);
+    }
+
+    __displayGraph() {
+        if (Ascript.getId(`graph-commit-${this.id}`) == null) {
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.id = `graph-commit-${this.id}`;
+            path.setAttribute("stroke", "#fff");
+            path.setAttribute("stroke-width", "2px");
+            path.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            const pos = this.__getPosition();
+            const parPos = this.getInherited().length < 1 ? pos : this.getInherited()[0].__getPosition();
+            const radius = 4;
+            path.setAttribute("d", `M ${pos.x} ${pos.y - radius} V ${parPos === pos ? parPos.y - radius : parPos.y + radius} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
+            Ascript.getId("graphic-graph").appendChild(path);
+        }
+    }
+
+    __getPosition() {
+        return {
+            x: this.element.getBoundingClientRect().left - this.element.parentElement.getBoundingClientRect().left + this.element.clientHeight / 2,
+            y: this.element.getBoundingClientRect().top - this.element.parentElement.getBoundingClientRect().top + this.element.clientHeight / 2
+        }
+    }
+}
+
 class View {
 
     constructor() {
         this.isLoading = true;
-        this.loadedPage = null;
         this.recentRepos = new Array();
+        this.commitCache = new CommitCache(this);
         const recents = ipcRenderer.sendSync("lifecycle", "queryRecents");
         if (recents.length != null)
             for (let i = 0; i < recents.length; i += 2)
@@ -177,10 +275,21 @@ class View {
         stashes.innerText = this.getLocale("editor.git.stash.name");
         networkList.append(localBranches, remotes, tags, stashes);
         containerContents.appendChild(networkList);
+
+        const graphContainer = this.createElement(null, 'commit-graph-container');
+        const graphTempContainer = this.createElement(null, 'graph-container');
+        const graphicGraph = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        graphicGraph.id = "graphic-graph";
+        graphTempContainer.appendChild(graphicGraph);
+        const graph = this.createElement("commit-graph", "commit-graph");
+        graphTempContainer.appendChild(graph);
+        graphContainer.appendChild(graphTempContainer);
+        containerContents.appendChild(graphContainer);
         appContainer.appendChild(containerContents);
 
         // request network content from ipc
         ipcRenderer.send("lifecycle", "queryNetwork");
+        ipcRenderer.send("lifecycle", "updateGraph");
 
         document.getElementsByTagName("body")[0].appendChild(appContainer);
         this.setLoaded(true);
@@ -205,7 +314,8 @@ class View {
     }
 
     clearView(transition=TransitionEffect.FADE | TransitionEffect.SLIDE_RIGHT) {
-            this.removeElement(document.getElementById("appContainer"), transition);
+        this.removeElement(document.getElementById("appContainer"), transition);
+        this.commitCache = new CommitCache(this);
     }
 
     getLocale(string_id) {
@@ -270,6 +380,8 @@ window.onload = () => {
             Ascript.getId("windowIconMaximize").classList.add("maximized");
         if (status === "unmaximized")
             Ascript.getId("windowIconMaximize").classList.remove("maximized");
+        if (status === "updateGraph")
+            view.commitCache.addAll(...args);
     });
     ipcRenderer.on("error", (event, error) => {
         new Ascript.Notification(`${Icon.getIcon(Icon.ERROR, 'ic')} ${error}`).setBackground("#f00").send();
