@@ -10,7 +10,7 @@ class i18n {
                 data.split("\n").forEach((str) => {
                     const sp = str.split(/\s/)
                     if (sp.length > 1)
-                        this.translation.set(sp[0], sp.slice(1, sp.length).join(" "));
+                        this.translation.set(sp[0], sp.slice(1, sp.length).filter((l) => l.length > 0).join(" "));
                 })
             }
         });

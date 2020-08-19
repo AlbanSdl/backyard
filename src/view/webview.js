@@ -1,6 +1,6 @@
 const { ipcRenderer } = require("electron");
-const { EOL } = require("os");
 const { DateFormat } = require("../app/Date");
+const { IntAllocator } = require("../app/IntAllocator");
 
 Icon = {
     FOLDER: 0,
@@ -34,10 +34,11 @@ TransitionEffect = {
 }
 
 class CommitCache {
-    
+
     constructor(view) {
         this.commits = [];
         this.view = view;
+        this.lineAllocator = new IntAllocator();
     }
 
     addAll(...commits) {
@@ -69,10 +70,50 @@ class Commit {
         this.isStash = raw.isStash;
         this.stashId = raw.stashId;
         this.element = null;
+        this.commitLine = -1;
+        this.commitLineSize = 20;
     }
 
     getDescription() {
         return this.message.split(os.EOF).splice(2).join(os.EOF);
+    }
+
+    /**
+     * Returns whether this is a merge commit
+     */
+    isBranchMerge() {
+        return this.parents.length > 1;
+    }
+
+    /**
+     * Returns whether the commit is a branch update (and must not alter the positions of the
+     * commit lines)
+     */
+    isBranchUpdate() {
+        return this.isBranchMerge() && this.getParents()[1].getChildren().filter((child) => child.date > this.date).length > 0;
+    }
+    
+    /**
+     * Returns whether the commit is the last of its branch (and there have been no more activity
+     * since the latest merge)
+     */
+    isBranchHeadMerge() {
+        return !this.isBranchUpdate() && this.isBranchMerge();
+    }
+
+    /**
+     * Returns whether this is a split commit
+     */
+    isBranchSplit() {
+        return this.getChildren().length > 1;
+    }
+
+    /**
+     * Returns a list of all the siblings of the commit (children of the parents of the commit),
+     * excluding the current one.
+     */
+    getSiblings() {
+        return this.getParents().reduce((accumulator, value) => { accumulator.push(...value.getChildren()); return accumulator }, []).filter((commit) => commit !== this);
     }
 
     display() {
@@ -98,34 +139,98 @@ class Commit {
         }
     }
 
-    getInherited() {
-        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id));
+    getChildren() {
+        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id) && !commit.isStash);
     }
 
     getParents() {
-        return this.parents.map(id => this.commitCache.getCommit(id)).filter(cm => cm != null);
+        return this.parents.map(id => this.commitCache.getCommit(id)).filter(cm => cm != null && !cm.isStash);
+    }
+
+    getDateRelativeCommit(relation) {
+        const index = this.commitCache.commits.indexOf(this) + relation;
+        return (index < 0 || index >= this.commitCache.commits.length) ? null : this.commitCache.commits[index];
+    }
+
+    getPreviousCommit() {
+        return this.getDateRelativeCommit(+1);
+    }
+
+    getNextCommit() {
+        return this.getDateRelativeCommit(-1);
     }
 
     __displayGraph() {
         if (Ascript.getId(`graph-commit-${this.id}`) == null) {
+            this.setupPosition();
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             path.id = `graph-commit-${this.id}`;
-            path.setAttribute("stroke", "#fff");
+
+            let color = this.commitCache.view.getLocale(`editor.git.graph.color.${this.commitLine % 8}`);
+            if (!/^#([a-f0-9]{3}){1,2}$/iu.test(color)) color = "#fff";
+            path.setAttribute("stroke", color);
             path.setAttribute("stroke-width", "2px");
             path.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
             const pos = this.__getPosition();
-            const parPos = this.getInherited().length < 1 ? pos : this.getInherited()[0].__getPosition();
             const radius = 4;
-            path.setAttribute("d", `M ${pos.x} ${pos.y - radius} V ${parPos === pos ? parPos.y - radius : parPos.y + radius} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
-            Ascript.getId("graphic-graph").appendChild(path);
+
+            let dPath = "";
+            for (let children of this.getChildren()) {
+                const childPos = children.__getPosition();
+                if (children.commitLine === this.commitLine) dPath += `M ${pos.x} ${pos.y - radius} V ${childPos === pos ? childPos.y - radius : childPos.y + radius}`;
+                else if (children.isBranchHeadMerge() || (this.isBranchSplit() && children.isBranchUpdate())) {
+                    dPath += `M ${pos.x} ${pos.y - radius} V ${childPos.y + this.element.clientHeight - radius} Q ${pos.x} ${childPos.y} ${pos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? -1 : 1)} ${childPos.y} H ${childPos.x + (this.commitLine > children.commitLine ? 1 : -1) * radius}`;
+                } else if (this.isBranchSplit() && !children.isBranchUpdate()) {
+                    dPath += `M ${pos.x + (this.commitLine > children.commitLine ? -1 : 1) * radius} ${pos.y} H ${childPos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? 1 : -1)} Q ${childPos.x} ${pos.y} ${childPos.x} ${childPos.y + radius}`
+                }
+            }
+            
+            path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
+            
+            const elem = Ascript.getId("graphic-graph");
+            if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(-3)) < this.commitLine * this.commitLineSize)
+                elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
+            elem.appendChild(path);
         }
     }
 
     __getPosition() {
         return {
-            x: this.element.getBoundingClientRect().left - this.element.parentElement.getBoundingClientRect().left + this.element.clientHeight / 2,
+            x: this.element.getBoundingClientRect().left - this.element.parentElement.getBoundingClientRect().left + this.element.clientHeight / 2 + this.commitLine * this.commitLineSize,
             y: this.element.getBoundingClientRect().top - this.element.parentElement.getBoundingClientRect().top + this.element.clientHeight / 2
         }
+    }
+
+    setupPosition() {
+
+        // Places the commit in the line of its parent (if line is not already set)
+        if (this.getNextCommit() != null && this.getChildren().length > 0 && this.commitLine < 0) {
+            this.commitLine = this.getChildren()[0].commitLine;
+        } else if (this.commitLine < 0) {
+            this.commitLine = this.commitCache.lineAllocator.allocate();
+        }
+
+        if (this.isBranchSplit()) {
+            // Manages branch split (or new branch)
+            const children = Array.from(this.getChildren());
+            children.splice(0, 1);
+            children.filter((child) => !child.isBranchUpdate() || child.getParents()[1] != this).forEach((child) => this.commitCache.lineAllocator.release(child.commitLine));
+        }
+
+        if (this.isBranchHeadMerge()) {
+            // Manages branch merge
+            const parents = Array.from(this.getParents());
+            parents.splice(0, 1);
+            parents.forEach((parent) => {
+                parent.commitLine = this.commitCache.lineAllocator.allocate();
+            });
+        }
+
+        /* DEBUG 
+        const debug = this.commitCache.view.createElement(null);
+        debug.innerText = this.commitCache.lineAllocator.allocated.length + " lines " + this.getParents().length + " parents " + this.getChildren().length + " children " + this.getSiblings().length + " siblings" + (this.isBranchUpdate() ? " branchUpdate" : '') + (this.isBranchHeadMerge() ? " headMerge" : '' + (this.isBranchSplit() ? " split" : ''));
+        this.element.prepend(debug); */
     }
 }
 
@@ -313,7 +418,7 @@ class View {
         }
     }
 
-    clearView(transition=TransitionEffect.FADE | TransitionEffect.SLIDE_RIGHT) {
+    clearView(transition = TransitionEffect.FADE | TransitionEffect.SLIDE_RIGHT) {
         this.removeElement(document.getElementById("appContainer"), transition);
         this.commitCache = new CommitCache(this);
     }

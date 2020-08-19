@@ -477,8 +477,10 @@ to{transform:rotate(359deg)}
     grid-column: 1;
     grid-row: 1;
     min-width: 20px;
-    width: 50px;
     overflow: auto;
+}
+#graphic-graph>path {
+    fill: none;
 }
 
 /*
