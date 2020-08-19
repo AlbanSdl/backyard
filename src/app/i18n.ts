@@ -1,11 +1,14 @@
-const fs = require("fs");
+import { readFile } from "fs";
 
-class i18n {
+export class i18n {
 
-    constructor(lang) {
+    public readonly lang: string;
+    protected readonly translation: Map<string, string>;
+
+    constructor(lang: string) {
         this.lang = lang;
         this.translation = new Map();
-        fs.readFile(`./src/resources/locales/${lang}`, "utf8", (err, data) => {
+        readFile(`./src/resources/locales/${lang}`, "utf8", (err, data) => {
             if (!err) {
                 data.split("\n").forEach((str) => {
                     const sp = str.split(/\s/)
@@ -16,11 +19,9 @@ class i18n {
         });
     }
 
-    getLocaleString(id) {
+    public getLocaleString(id: string): string {
         const translation = this.translation.get(id);
         return translation == null ? id : translation;
     }
 
 }
-
-module.exports.i18n = i18n;

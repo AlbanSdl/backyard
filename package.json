@@ -4,7 +4,9 @@
   "description": "A modern git GUI",
   "main": "index.js",
   "scripts": {
-    "start": "electron ."
+    "build": "tsc",
+    "start": "npm run build && npm run copyAssets && electron ./dist/index.js",
+    "copyAssets": "copyfiles -e src/**/*.ts src/**/* dist/"
   },
   "repository": {
     "type": "git",
@@ -17,10 +19,12 @@
   },
   "homepage": "https://github.com/AlbanSdl/backyard#readme",
   "devDependencies": {
+    "copyfiles": "^2.3.0",
     "electron": "^9.2.0"
   },
   "dependencies": {
-    "electron-store": "^6.0.0",
-    "nodegit": "^0.27.0"
+    "@types/nodegit": "^0.26.7",
+    "nodegit": "^0.27.0",
+    "typescript": "^3.9.7"
   }
 }

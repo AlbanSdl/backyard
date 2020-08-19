@@ -1,43 +1,45 @@
-class DateFormat {
+export class DateFormat {
 
-    constructor(date) {
+    private date: Date;
+
+    constructor(date: Date) {
         this.date = date;
     }
 
-    toSuchDigits(dateElem, nb) {
+    private toSuchDigits(dateElem: number, nb: number): string {
         const d = new String(dateElem);
         if (nb > d.length)
             return `${'0'.repeat(nb-d.length)}${d}`;
         if (nb < d.length)
             return d.substring(d.length - nb);
-        return d;
+        return <string> d;
     }
 
-    getYear(digits) {
+    private getYear(digits: number): string {
         return this.toSuchDigits(this.date.getFullYear(), digits);
     }
 
-    getMonth(digits) {
+    private getMonth(digits: number): string {
         return this.toSuchDigits(this.date.getMonth() + 1, digits);
     }
 
-    getDate(digits) {
+    private getDate(digits: number): string {
         return this.toSuchDigits(this.date.getDate(), digits);
     }
 
-    getHour(digits) {
+    private getHour(digits: number): string {
         return this.toSuchDigits(this.date.getHours(), digits);
     }
 
-    getMinutes(digits) {
+    private getMinutes(digits: number): string {
         return this.toSuchDigits(this.date.getMinutes(), digits);
     }
 
-    getSeconds(digits) {
+    private getSeconds(digits: number): string {
         return this.toSuchDigits(this.date.getSeconds(), digits);
     }
 
-    getMillis(digits) {
+    private getMillis(digits: number): string {
         return this.toSuchDigits(this.date.getMilliseconds(), digits);
     }
 
@@ -53,7 +55,7 @@ class DateFormat {
      * Set as much characters as you would like numbers to appear
      * @param {String} format the format to follow
      */
-    format(format) {
+    public format(format: string) {
         const reg = /(y+)|(m+)|(d+)|(h+)|(s+)|(M+)|(S+)/mug
         let arr;
         while ((arr = reg.exec(format)) !== null) {
@@ -87,5 +89,3 @@ class DateFormat {
         return format;
     }
 }
-
-module.exports.DateFormat = DateFormat;

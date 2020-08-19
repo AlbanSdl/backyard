@@ -1,21 +1,23 @@
-const { ipcMain, dialog, app } = require("electron");
-const Store = require("electron-store");
-const settings = new Store();
-const git = require('nodegit');
-const { sep } = require("path");
+import { ipcMain, dialog, app } from "electron";
+import { Backyard } from "index";
+import git = require('nodegit');
+import { sep } from "path";
 
-class IPC {
+export class IPC {
 
-    constructor(backyard) {
+    private readonly backyard: Backyard;
+    private repo: git.Repository;
+
+    constructor(backyard: Backyard) {
         this.backyard = backyard;
         this.init();
         this.repo = null;
     }
 
-    init() {
+    private init(): void {
         ipcMain.on("lifecycle", (event, status, ...args) => {
             if (status === "init") {
-                const repoPath = settings.get("editor.currentPath");
+                const repoPath = <string> this.backyard.settings.get("editor.currentPath");
                 if (repoPath != null)
                     this.openRepository(repoPath, event);
                 else
@@ -23,8 +25,8 @@ class IPC {
             } else if (status === "queryRecents") {
                 const arr = new Array();
                 for (let i = 0; i < 9; i++) {
-                    const name = settings.get(`editor.recents.${i}.name`);
-                    const path = settings.get(`editor.recents.${i}.path`);
+                    const name = this.backyard.settings.get(`editor.recents.${i}.name`);
+                    const path = this.backyard.settings.get(`editor.recents.${i}.path`);
                     if (name != null && path != null) {
                         arr.push(name);
                         arr.push(path);
@@ -47,12 +49,12 @@ class IPC {
                     this.openRepository(answer[0], event);
             } else if (status === "loadRecent") {
                 if (args.length > 0) {
-                    this.openRepository(settings.get(`editor.recents.${args[0]}.path`), event);
+                    this.openRepository(<string> this.backyard.settings.get(`editor.recents.${args[0]}.path`), event);
                 } else {
                     event.reply("error", "error.load.from_recents");
                 }
             } else if (status === "closeRepo") {
-                settings.delete("editor.currentPath");
+                this.backyard.settings.delete("editor.currentPath");
                 this.repo = null;
                 event.reply("lifecycle", "mainMenu");
             } else if (status === "queryNetwork") {
@@ -81,11 +83,11 @@ class IPC {
         })
     }
 
-    getLocaleString(id) {
+    protected getLocaleString(id: string): string {
         return this.backyard.i18n.getLocaleString(id);
     }
 
-    openRepository(path, event) {
+    private openRepository(path: string, event: Electron.IpcMainEvent) {
         try {
             const regexp = new RegExp("^.*\\" + sep + "(.+?)$", "mug");
             const repoName = regexp.exec(path)[1];
@@ -93,53 +95,54 @@ class IPC {
                 if (repo != null && repoName != null) {
                     this.repo = repo;
                     this.addRecent(path, repoName);
-                    settings.set("editor.currentPath", path);
+                    this.backyard.settings.set("editor.currentPath", path);
                     event.reply("lifecycle", "openRepo", path, repoName);
                 }
             });
         } catch (ex) {
+            console.log(ex);
             event.reply("error", this.getLocaleString("error.loading.invalid.path"))
         }
     }
 
-    queryNetwork(event) {
+    private queryNetwork(event: Electron.IpcMainEvent) {
         if (this.repo != null)
-            this.repo.getReferenceNames(git.Reference.TYPE.ALL).then((refs) => {
+            this.repo.getReferenceNames(git.Reference.TYPE.LISTALL).then((refs) => {
                 refs.forEach((refName) => {
                     event.reply("lifecycle", "registerNetworkPart", refName);
                 })
             })
     }
 
-    checkoutBranch(ref, event) {
+    private checkoutBranch(ref: string, event: Electron.IpcMainEvent) {
         this.repo.checkoutBranch(ref, {
             checkoutStrategy: git.Checkout.STRATEGY.SAFE
         }).then(() => event.reply("lifecycle", "executed", this.getLocaleString("editor.git.checkout.complete"))).catch((err) => event.reply("error", this.getLocaleString("editor.git.checkout.error") + err));
     }
 
-    addRecent(repoPath, repoName) {
+    private addRecent(repoPath: string, repoName: string) {
         let max = 8;
         for (let i = 0; i < 8; i++) {
-            const name = settings.get(`editor.recents.${i}.name`);
-            const path = settings.get(`editor.recents.${i}.path`);
+            const name = this.backyard.settings.get(`editor.recents.${i}.name`);
+            const path = this.backyard.settings.get(`editor.recents.${i}.path`);
             if (name === null || path === null || (name === repoName && path === repoPath)) {
                 max = i;
                 break;
             }
         }
         for (let i = max; i > 0; i--) {
-            const name = settings.get(`editor.recents.${i - 1}.name`);
-            const path = settings.get(`editor.recents.${i - 1}.path`);
+            const name = this.backyard.settings.get(`editor.recents.${i - 1}.name`);
+            const path = this.backyard.settings.get(`editor.recents.${i - 1}.path`);
             if (name != null && path != null) {
-                settings.set(`editor.recents.${i}.name`, name);
-                settings.set(`editor.recents.${i}.path`, path);
+                this.backyard.settings.set(`editor.recents.${i}.name`, name);
+                this.backyard.settings.set(`editor.recents.${i}.path`, path);
             }
         }
-        settings.set(`editor.recents.0.path`, repoPath);
-        settings.set(`editor.recents.0.name`, repoName);
+        this.backyard.settings.set(`editor.recents.0.path`, repoPath);
+        this.backyard.settings.set(`editor.recents.0.name`, repoName);
     }
 
-    async getCommitAndStashes(name = null) {
+    private async getCommitAndStashes(name: string = null) {
         const arr = [];
         const walker = git.Revwalk.create(this.repo);
         walker.pushGlob(`refs/${name != null ? name : '*'}/*`);
@@ -153,10 +156,10 @@ class IPC {
             committerName: commit.committer().name(),
             committerMail: commit.committer().email(),
             date: commit.date(),
-            parents: commit.parents().map(oid => oid.tostrS()),
+            parents: commit.parents().map((oid: git.Oid) => oid.tostrS()),
             isStash: false
         })));
-        await git.Stash.foreach(this.repo, async (nb, message, oid) => {
+        await git.Stash.foreach(this.repo, async (nb: number, message: string, oid: git.Oid) => {
             await this.repo.getCommit(oid).then((stash) => {
                 arr.push({
                     id: stash.toString(),
@@ -177,5 +180,3 @@ class IPC {
     }
 
 }
-
-module.exports.IPC = IPC;

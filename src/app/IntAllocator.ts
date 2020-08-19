@@ -1,6 +1,9 @@
 class AllocationError extends Error {
 
-    constructor(value) {
+    public name: string;
+    public message: string;
+
+    constructor(value: number) {
         super();
         this.name = "AllocationError";
         this.message = `Cannot release not allocated value '${value}'`;
@@ -8,16 +11,18 @@ class AllocationError extends Error {
 
 }
 
-class IntAllocator {
+export class IntAllocator {
     
-    constructor(data=[]) {
+    private allocated: Array<number>;
+
+    constructor(data: Array<number> = []) {
         this.allocated = data;
     }
 
     /**
      * Allocates a new Integer. Returns the allocated value
      */
-    allocate() {
+    public allocate(): number {
         let i = 0;
         while (this.allocated.indexOf(i) >= 0)
             i++;
@@ -27,25 +32,23 @@ class IntAllocator {
 
     /**
      * Releases a value of the allocator, to make it usable again
-     * @param {Number} value the integer to release
+     * @param {number} value the integer to release
      */
-    release(value) {
+    public release(value: number): void {
         const index = this.allocated.indexOf(value);
         if (index < 0)
             throw new AllocationError(value);
         this.allocated.splice(index, 1);
     }
 
-    isAllocated(value) {
+    public isAllocated(value: number): boolean {
         return this.allocated.indexOf(value) >= 0;
     }
 
     /**
      * Returns a copy of the allocator, containing the same allocated values
      */
-    copy() {
+    protected copy(): IntAllocator {
         return new IntAllocator(Array.from(this.allocated));
     }
 }
-
-module.exports.IntAllocator = IntAllocator;
