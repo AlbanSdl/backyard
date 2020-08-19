@@ -1,6 +1,5 @@
 editor.menu.title Backyard
 error.ipc.unknown_action Error: unrecognized action. This is probably a bug
-editor.commit.date_format MM/dd/yy at hh:mm:ss
 editor.git.graph.color.0 #a93226
 editor.git.graph.color.1 #f4d03f
 editor.git.graph.color.2 #d35400

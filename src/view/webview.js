@@ -44,7 +44,11 @@ class CommitCache {
     addAll(...commits) {
         const coms = commits.map(commit => new Commit(commit, this)).filter((commit) => this.commits.filter((cm) => cm.id === commit.id).length === 0);
         this.commits.push(...coms);
-        coms.forEach(com => com.display());
+        const intervalId = setInterval(() => {
+            if (coms.length === 0)
+                return clearInterval(intervalId);
+            coms.shift().display();
+        }, 1);
     }
 
     getCommit(id) {
@@ -189,7 +193,7 @@ class Commit {
             path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
             
             const elem = Ascript.getId("graphic-graph");
-            if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(-3)) < this.commitLine * this.commitLineSize)
+            if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize)
                 elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
             elem.appendChild(path);
         }
