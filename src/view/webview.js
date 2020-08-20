@@ -244,6 +244,7 @@ class View {
         this.isLoading = true;
         this.recentRepos = new Array();
         this.commitCache = new CommitCache(this);
+        this.cachedLocales = {};
         const recents = ipcRenderer.sendSync("lifecycle", "queryRecents");
         if (recents.length != null)
             for (let i = 0; i < recents.length; i += 2)
@@ -428,7 +429,8 @@ class View {
     }
 
     getLocale(string_id) {
-        return ipcRenderer.sendSync("localeString", string_id);
+        const cached = this.cachedLocales[string_id];
+        return cached != null ? cached : (this.cachedLocales[string_id] = ipcRenderer.sendSync("localeString", string_id));
     }
 
     removeElement(elem, animation, duration = ".5") {

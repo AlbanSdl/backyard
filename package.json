@@ -4,9 +4,7 @@
   "description": "A modern git GUI",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "npm run build && npm run copyAssets && electron ./dist/index.js",
-    "copyAssets": "copyfiles -e src/**/*.ts src/**/* dist/"
+    "start": "tsc && copyfiles -e src/**/*.ts src/**/* dist/ && electron ./dist/index.js"
   },
   "repository": {
     "type": "git",
