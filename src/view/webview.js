@@ -8,6 +8,9 @@ Icon = {
     SETTINGS: 2,
     CLOSE: 3,
     ERROR: 4,
+    LAPTOP: 5,
+    CLOUD: 6,
+    LABEL: 7,
     getIcon: (type, classes = "", id = null) => {
         const str = `${classes.length > 0 ? "class=\"" + classes + "\" " : ""}${id != null ? "id=\"" + id + "\"" : ""}`;
         switch (type) {
@@ -21,6 +24,12 @@ Icon = {
                 return `<svg ${str} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
             case Icon.ERROR:
                 return `<svg ${str} xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
+            case Icon.LAPTOP:
+                return `<svg ${str} xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/></svg>`;
+            case Icon.CLOUD:
+                return `<svg ${str} xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>`;
+            case Icon.LABEL:
+                return `<svg ${str} xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/></svg>`;
         }
     }
 }
@@ -56,6 +65,18 @@ class CommitCache {
         return cms.length > 0 ? cms[0] : null;
     }
 
+    async getPlacedCommit(id) {
+        return new Promise((resolve) => {
+            const int = setInterval(() => {
+                const commit = this.getCommit(id);
+                if (commit != null && commit.element != null) {
+                    clearInterval(int);
+                    resolve(commit);
+                }
+            }, 200);
+        });
+    }
+
 }
 
 class Commit {
@@ -76,6 +97,8 @@ class Commit {
         this.element = null;
         this.commitLine = -1;
         this.commitLineSize = 20;
+        this.path = null;
+        this.radius = 4;
     }
 
     getDescription() {
@@ -96,7 +119,7 @@ class Commit {
     isBranchUpdate() {
         return this.isBranchMerge() && this.getParents()[1].getChildren().filter((child) => child.date > this.date).length > 0;
     }
-    
+
     /**
      * Returns whether the commit is the last of its branch (and there have been no more activity
      * since the latest merge)
@@ -123,6 +146,7 @@ class Commit {
     display() {
         if (!this.isStash) {
             this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
+            const tags = this.commitCache.view.createElement(null, "tagContainer");
             const id = this.commitCache.view.createElement(null, "id");
             id.innerText = this.id.substr(0, 7);
             const message = this.commitCache.view.createElement(null, "message");
@@ -131,20 +155,20 @@ class Commit {
             author.innerText = this.authorName;
             const date = this.commitCache.view.createElement(null, "date");
             date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
-            this.element.append(id, message, author, date);
-            Ascript.getId("commit-graph").appendChild(this.element);
+            this.element.append(tags, id, message, author, date);
+            document.getElementById("commit-graph").appendChild(this.element);
             this.__displayGraph();
         } else {
             const listElem = document.getElementById(`stashList`);
             if (listElem == null) return;
-            const ref = this.commitCache.view.createElement(null, "ref");
+            const ref = this.commitCache.view.createElement(null, "ref", "smooth");
             ref.innerText = this.summary;
             listElem.appendChild(ref);
         }
     }
 
     getChildren() {
-        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id) && !commit.isStash);
+        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id) && !commit.isStash).sort((a, b) => b.date - a.date);
     }
 
     getParents() {
@@ -165,7 +189,7 @@ class Commit {
     }
 
     __displayGraph() {
-        if (Ascript.getId(`graph-commit-${this.id}`) == null) {
+        if (document.getElementById(`graph-commit-${this.id}`) == null) {
             this.setupPosition();
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             path.id = `graph-commit-${this.id}`;
@@ -177,7 +201,7 @@ class Commit {
             path.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
             const pos = this.__getPosition();
-            const radius = 4;
+            const radius = this.radius;
 
             let dPath = "";
             for (let children of this.getChildren()) {
@@ -189,13 +213,15 @@ class Commit {
                     dPath += `M ${pos.x + (this.commitLine > children.commitLine ? -1 : 1) * radius} ${pos.y} H ${childPos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? 1 : -1)} Q ${childPos.x} ${pos.y} ${childPos.x} ${childPos.y + radius}`
                 }
             }
-            
+
             path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
-            
-            const elem = Ascript.getId("graphic-graph");
+
+            const elem = document.getElementById("graphic-graph");
             if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize)
                 elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
             elem.appendChild(path);
+
+            this.path = path;
         }
     }
 
@@ -236,6 +262,55 @@ class Commit {
         debug.innerText = this.commitCache.lineAllocator.allocated.length + " lines " + this.getParents().length + " parents " + this.getChildren().length + " children " + this.getSiblings().length + " siblings" + (this.isBranchUpdate() ? " branchUpdate" : '') + (this.isBranchHeadMerge() ? " headMerge" : '' + (this.isBranchSplit() ? " split" : ''));
         this.element.prepend(debug); */
     }
+
+    /**
+     * Register a branch head at this commit
+     */
+    attachHead(refName) {
+        const tag = this.commitCache.view.createElement(`ref-${refName}`, "ref", "smooth");
+        tag.innerHTML = Icon.getIcon(refName.includes("head") ? Icon.LAPTOP : refName.includes("remotes") ? Icon.CLOUD : Icon.LABEL, "tooltipIcon") + refName.split("/").pop();
+        const color = refName.includes("tag") ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
+        tag.style.background = color;
+        this.element.getElementsByClassName("tagContainer")[0].appendChild(tag);
+        const pos = this.__getPosition();
+
+        if (refName.includes("head") || refName.includes("remote")) {
+            tag.draggable = true;
+            tag.style.cursor = "grab";
+            let activated = false;
+            tag.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData("application/backyard", JSON.stringify({ref: refName, commit: this.id}));
+                event.dataTransfer.setData("activator/graph", "activator");
+                for (const elem of document.getElementById("commit-graph").getElementsByClassName("ref")) {
+                    if (elem.id.includes("tag") || elem.id.includes("stash") || elem === tag)
+                        elem.style.opacity = .5;
+                }
+                activated = true;
+            });
+            tag.addEventListener('dragend', () => {
+                for (const elem of document.getElementById("commit-graph").getElementsByClassName("ref")) {
+                    if (elem.id.includes("tag") || elem.id.includes("stash") || elem === tag)
+                        elem.style.opacity = 1;
+                }
+                activated = false;
+            })
+            tag.addEventListener('dragover', (event) => {
+                if (event.dataTransfer.types.includes("activator/graph") && !activated) event.preventDefault();
+            })
+            tag.addEventListener('drop', (event) => {
+                const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
+                this.commitCache.view.mergeElements(dataFrom.ref, refName);
+            });
+        }
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.id = `graph-ref-${refName}`;
+        path.classList.add("tagLink");
+        path.setAttribute("stroke", color);
+        path.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        path.setAttribute("d", `M ${pos.x + this.radius} ${pos.y} H ${tag.getBoundingClientRect().x} Z`);
+        document.getElementById("graphic-graph").appendChild(path);
+    }
 }
 
 class View {
@@ -256,7 +331,7 @@ class View {
 
     setLoaded(loaded) {
         if (this.isLoading && loaded)
-            Ascript.fadeOutElement(Ascript.getClass("splash")[0], true);
+            Ascript.fadeOutElement(document.getElementsByClassName("splash")[0], true);
         this.isLoading = !loaded;
     }
 
@@ -303,7 +378,7 @@ class View {
     }
 
     setTitle(title) {
-        Ascript.getId("appBar").getElementsByClassName("title")[0].innerText = title;
+        document.getElementById("appBar").getElementsByClassName("title")[0].innerText = title;
     }
 
     loadMainMenu() {
@@ -398,28 +473,58 @@ class View {
         appContainer.appendChild(containerContents);
 
         // request network content from ipc
-        ipcRenderer.send("lifecycle", "queryNetwork");
         ipcRenderer.send("lifecycle", "updateGraph");
+        ipcRenderer.send("lifecycle", "queryNetwork");
 
         document.getElementsByTagName("body")[0].appendChild(appContainer);
         this.setLoaded(true);
     }
 
-    registerNetworkPart(refName) {
+    registerNetworkPart(refName, head) {
         if (refName.indexOf("stash") < 0) {
             const match = refName.match(/refs\/([^\/]+)/mu);
             if (match == null || match.length < 1) return;
             const listElem = document.getElementById(`${match[1]}List`);
             if (listElem == null) return;
-            const ref = this.createElement(null, "ref");
+            const ref = this.createElement(null, "ref", "smooth");
             ref.innerText = refName.substr(match[0].length + 1);
             if (match[1] === "heads") {
                 ref.addEventListener('dblclick', () => {
                     ipcRenderer.send("lifecycle", "checkout", refName);
                 });
-                Ascript.addRippleListener(ref);
             }
             listElem.appendChild(ref);
+
+            this.commitCache.getPlacedCommit(head).then((commit) => commit.attachHead(refName));
+
+            if (refName.indexOf("tag") < 0) {
+                ref.draggable = true;
+                ref.style.cursor = "grab";
+                let activated = false;
+                ref.addEventListener('dragstart', (event) => {
+                    event.dataTransfer.setData("application/backyard", JSON.stringify({ref: refName}));
+                    event.dataTransfer.setData("activator/menu", "activator");
+                    for (const elem of document.getElementById("networkList").getElementsByClassName("ref")) {
+                        if ((!elem.parentElement.id.includes("remote") && !elem.parentElement.id.includes("head")) || elem === ref)
+                            elem.style.opacity = .5;
+                    }
+                    activated = true;
+                });
+                ref.addEventListener('dragend', () => {
+                    for (const elem of document.getElementById("networkList").getElementsByClassName("ref")) {
+                        if ((!elem.parentElement.id.includes("remote") && !elem.parentElement.id.includes("head")) || elem === ref)
+                            elem.style.opacity = 1;
+                    }
+                    activated = false;
+                })
+                ref.addEventListener('dragover', (event) => {
+                    if (event.dataTransfer.types.includes("activator/menu") && !activated) event.preventDefault();
+                })
+                ref.addEventListener('drop', (event) => {
+                    const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
+                    this.commitCache.view.mergeElements(dataFrom.ref, refName);
+                });
+            }
         }
     }
 
@@ -431,6 +536,10 @@ class View {
     getLocale(string_id) {
         const cached = this.cachedLocales[string_id];
         return cached != null ? cached : (this.cachedLocales[string_id] = ipcRenderer.sendSync("localeString", string_id));
+    }
+
+    mergeElements(elem_from, elem_to) {
+        new Ascript.PopUp("merge").setTitle(`Merging ${elem_from} to ${elem_to}`).setContent("This is still work in progress").send();
     }
 
     removeElement(elem, animation, duration = ".5") {
@@ -476,7 +585,7 @@ class View {
 const view = new View();
 
 window.onload = () => {
-    Ascript.getId("loaderText").innerText = view.getLocale("editor.app.loading");
+    document.getElementById("loaderText").innerText = view.getLocale("editor.app.loading");
     ipcRenderer.send("lifecycle", "init");
     ipcRenderer.on("lifecycle", (event, status, ...args) => {
         if (status === "mainMenu")
@@ -484,26 +593,26 @@ window.onload = () => {
         if (status === "openRepo")
             view.loadRepository(args[0], args[1]);
         if (status === "registerNetworkPart")
-            view.registerNetworkPart(args[0]);
+            view.registerNetworkPart(args[0], args[1]);
         if (status === "executed")
             new Ascript.Notification(args[0]).setBackground("#2ad500").setDuration(2).send();
         if (status === "maximized")
-            Ascript.getId("windowIconMaximize").classList.add("maximized");
+            document.getElementById("windowIconMaximize").classList.add("maximized");
         if (status === "unmaximized")
-            Ascript.getId("windowIconMaximize").classList.remove("maximized");
+            document.getElementById("windowIconMaximize").classList.remove("maximized");
         if (status === "updateGraph")
             view.commitCache.addAll(...args);
     });
     ipcRenderer.on("error", (event, error) => {
         new Ascript.Notification(`${Icon.getIcon(Icon.ERROR, 'ic')} ${error}`).setBackground("#f00").send();
     });
-    Ascript.getId("windowIconClose").addEventListener('click', () => {
+    document.getElementById("windowIconClose").addEventListener('click', () => {
         ipcRenderer.send("lifecycle", "exitApp");
     });
-    Ascript.getId("windowIconMinimize").addEventListener('click', () => {
+    document.getElementById("windowIconMinimize").addEventListener('click', () => {
         ipcRenderer.send("lifecycle", "minimizeApp");
     });
-    Ascript.getId("windowIconMaximize").addEventListener('click', () => {
+    document.getElementById("windowIconMaximize").addEventListener('click', () => {
         ipcRenderer.send("lifecycle", "maximizeApp");
     })
 }

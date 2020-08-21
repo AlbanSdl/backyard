@@ -5,7 +5,8 @@ body, html{
     margin: 0;
     color: #fff;
     font-family: 'Source Sans Pro', sans-serif;
-    font-weight: 300
+    font-weight: 300;
+    user-select: none;
 }
 
 /*.centered{margin:auto}
@@ -423,7 +424,7 @@ to{transform:rotate(359deg)}
  * Network lists
  */
 .networkList {
-    flex: 2 0 auto;
+    flex: 2 1 auto;
     max-width: 400px;
 }
 .networkList>.list {
@@ -437,6 +438,10 @@ to{transform:rotate(359deg)}
     user-select: none;
     position: relative;
     padding: 2px 10px;
+    border-radius: 2px;
+}
+.ref>* {
+    user-select: none;
 }
 .networkList>.list>.ref:nth-child(1) {
     margin-top: 5px;
@@ -453,6 +458,7 @@ to{transform:rotate(359deg)}
 .graph-container {
     display: grid;
     grid-template-columns: min-content;
+    width: fit-content;
 }
 .commit-graph {
     display: table;
@@ -460,7 +466,7 @@ to{transform:rotate(359deg)}
     min-width: 500px;
     white-space: nowrap;
     text-overflow: ellipsis;
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1;
 }
 .commit-graph>.commit {
@@ -469,18 +475,51 @@ to{transform:rotate(359deg)}
 .commit-graph>.commit>*{
     display: table-cell;
     padding: 2px 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.commit-graph>.commit>.message {
+    max-width: 50ch;
+}
+.commit-graph>.commit>.date {
+    max-width: 20ch;
 }
 #graphic-graph {
     position: relative;
     display: block;
     height: 100%;
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
     min-width: 20px;
     overflow: auto;
 }
 #graphic-graph>path {
     fill: none;
+}
+.tagContainer>.ref {
+    padding: 0 6px;
+    border-radius: 2px;
+    z-index: 1;
+    font-size: 14px;
+    display: inline-flex;
+    margin: 0 2px;
+    user-select: none;
+}
+path.tagLink {
+    stroke-width: 1px;
+    stroke-opacity: .4;
+}
+.tagContainer>.ref:nth-child(1) {
+    margin: 0 !important;
+}
+.tooltipIcon {
+    width: 14px;
+    height: 14px;
+    margin: 2px 4px 2px 0;
+}
+.commit>.tagContainer {
+    padding-left: 0 !important;
 }
 
 /*

@@ -109,7 +109,9 @@ export class IPC {
         if (this.repo != null)
             this.repo.getReferenceNames(git.Reference.TYPE.LISTALL).then((refs) => {
                 refs.forEach((refName) => {
-                    event.reply("lifecycle", "registerNetworkPart", refName);
+                    this.repo.getBranchCommit(refName).then(commit => {
+                        event.reply("lifecycle", "registerNetworkPart", refName, commit.toString());
+                    });
                 })
             })
     }
