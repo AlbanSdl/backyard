@@ -217,8 +217,17 @@ class Commit {
             path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
 
             const elem = document.getElementById("graphic-graph");
-            if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize)
+            if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize) {
                 elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
+                for (const child of elem.children) {
+                    if (child.id.includes("ref")) {
+                        const d = child.getAttribute("d");
+                        const reg = /H\s?(\d*)/ui;
+                        const res = d.match(reg);
+                        child.setAttribute("d", d.replace(reg, `H ${Number.parseFloat(res.length > 1 ? res[1] : "0") + this.commitLineSize}`));
+                    }
+                }
+            }
             elem.appendChild(path);
 
             this.path = path;
@@ -256,11 +265,6 @@ class Commit {
                 parent.commitLine = this.commitCache.lineAllocator.allocate();
             });
         }
-
-        /* DEBUG 
-        const debug = this.commitCache.view.createElement(null);
-        debug.innerText = this.commitCache.lineAllocator.allocated.length + " lines " + this.getParents().length + " parents " + this.getChildren().length + " children " + this.getSiblings().length + " siblings" + (this.isBranchUpdate() ? " branchUpdate" : '') + (this.isBranchHeadMerge() ? " headMerge" : '' + (this.isBranchSplit() ? " split" : ''));
-        this.element.prepend(debug); */
     }
 
     /**
@@ -279,7 +283,7 @@ class Commit {
             tag.style.cursor = "grab";
             let activated = false;
             tag.addEventListener('dragstart', (event) => {
-                event.dataTransfer.setData("application/backyard", JSON.stringify({ref: refName, commit: this.id}));
+                event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName, commit: this.id }));
                 event.dataTransfer.setData("activator/graph", "activator");
                 for (const elem of document.getElementById("commit-graph").getElementsByClassName("ref")) {
                     if (elem.id.includes("tag") || elem.id.includes("stash") || elem === tag)
@@ -303,13 +307,16 @@ class Commit {
             });
         }
 
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.id = `graph-ref-${refName}`;
-        path.classList.add("tagLink");
-        path.setAttribute("stroke", color);
-        path.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        path.setAttribute("d", `M ${pos.x + this.radius} ${pos.y} H ${tag.getBoundingClientRect().x} Z`);
-        document.getElementById("graphic-graph").appendChild(path);
+        if (tag.parentElement.children.length === 1) {
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const graph = document.getElementById("graphic-graph");
+            path.id = `graph-ref-${this.id}`;
+            path.classList.add("tagLink");
+            path.setAttribute("stroke", color);
+            path.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            path.setAttribute("d", `M ${pos.x + this.radius} ${pos.y} H ${tag.getBoundingClientRect().x - graph.getBoundingClientRect().x} Z`);
+            graph.appendChild(path);
+        }
     }
 }
 
@@ -502,7 +509,7 @@ class View {
                 ref.style.cursor = "grab";
                 let activated = false;
                 ref.addEventListener('dragstart', (event) => {
-                    event.dataTransfer.setData("application/backyard", JSON.stringify({ref: refName}));
+                    event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
                     event.dataTransfer.setData("activator/menu", "activator");
                     for (const elem of document.getElementById("networkList").getElementsByClassName("ref")) {
                         if ((!elem.parentElement.id.includes("remote") && !elem.parentElement.id.includes("head")) || elem === ref)

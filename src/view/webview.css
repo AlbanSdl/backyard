@@ -511,7 +511,7 @@ path.tagLink {
     stroke-opacity: .4;
 }
 .tagContainer>.ref:nth-child(1) {
-    margin: 0 !important;
+    margin: 0 2px 0 0 !important;
 }
 .tooltipIcon {
     width: 14px;
