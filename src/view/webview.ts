@@ -7,19 +7,25 @@ import { Ascript } from "./ascript";
 namespace Icon {
 
     export enum Type {
-        FOLDER = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`,
-        EDIT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
-        SETTINGS = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="#fff" d="M15.95 10.78c.03-.25.05-.51.05-.78s-.02-.53-.06-.78l1.69-1.32c.15-.12.19-.34.1-.51l-1.6-2.77c-.1-.18-.31-.24-.49-.18l-1.99.8c-.42-.32-.86-.58-1.35-.78L12 2.34c-.03-.2-.2-.34-.4-.34H8.4c-.2 0-.36.14-.39.34l-.3 2.12c-.49.2-.94.47-1.35.78l-1.99-.8c-.18-.07-.39 0-.49.18l-1.6 2.77c-.1.18-.06.39.1.51l1.69 1.32c-.04.25-.07.52-.07.78s.02.53.06.78L2.37 12.1c-.15.12-.19.34-.1.51l1.6 2.77c.1.18.31.24.49.18l1.99-.8c.42.32.86.58 1.35.78l.3 2.12c.04.2.2.34.4.34h3.2c.2 0 .37-.14.39-.34l.3-2.12c.49-.2.94-.47 1.35-.78l1.99.8c.18.07.39 0 .49-.18l1.6-2.77c.1-.18.06-.39-.1-.51l-1.67-1.32zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>`,
-        CLOSE = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`,
-        ERROR = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`,
-        LAPTOP = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z"/></svg>`,
-        CLOUD = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>`,
-        LABEL = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/></svg>`
+        FOLDER = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M10,4h-6c-1.1,0,-1.99,0.9,-1.99,2l-0.01,12c0,1.1,0.9,2,2,2h16c1.1,0,2,-0.9,2,-2v-10c0,-1.1,-0.9,-2,-2,-2h-8l-2,-2z"/></svg>`,
+        EDIT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M3,17.25v3.75h3.75l11.06,-11.06l-3.75,-3.75l-11.06,11.06zm17.71,-10.21c0.39,-0.39,0.39,-1.02,0,-1.41l-2.34,-2.34c-0.39,-0.39,-1.02,-0.39,-1.41,0l-1.83,1.83l3.75,3.75l1.83,-1.83z"/></svg>`,
+        SETTINGS = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="#fff" d="M15.95,10.78c0.03,-0.25,0.05,-0.51,0.05,-0.78s-0.02,-0.53,-0.06,-0.78l1.69,-1.32c0.15,-0.12,0.19,-0.34,0.1,-0.51l-1.6,-2.77c-0.1,-0.18,-0.31,-0.24,-0.49,-0.18l-1.99,0.8c-0.42,-0.32,-0.86,-0.58,-1.35,-0.78l-0.3,-2.12c-0.03,-0.2,-0.2,-0.34,-0.4,-0.34h-3.2c-0.2,0,-0.36,0.14,-0.39,0.34l-0.3,2.12c-0.49,0.2,-0.94,0.47,-1.35,0.78l-1.99,-0.8c-0.18,-0.07,-0.39,0,-0.49,0.18l-1.6,2.77c-0.1,0.18,-0.06,0.39,0.1,0.51l1.69,1.32c-0.04,0.25,-0.07,0.52,-0.07,0.78s0.02,0.53,0.06,0.78l-1.69,1.32c-0.15,0.12,-0.19,0.34,-0.1,0.51l1.6,2.77c0.1,0.18,0.31,0.24,0.49,0.18l1.99,-0.8c0.42,0.32,0.86,0.58,1.35,0.78l0.3,2.12c0.04,0.2,0.2,0.34,0.4,0.34h3.2c0.2,0,0.37,-0.14,0.39,-0.34l0.3,-2.12c0.49,-0.2,0.94,-0.47,1.35,-0.78l1.99,0.8c0.18,0.07,0.39,0,0.49,-0.18l1.6,-2.77c0.1,-0.18,0.06,-0.39,-0.1,-0.51l-1.67,-1.32zm-5.95,2.22c-1.65,0,-3,-1.35,-3,-3s1.35,-3,3,-3s3,1.35,3,3s-1.35,3,-3,3z"/></svg>`,
+        CLOSE = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M19,6.41l-1.41,-1.41l-5.59,5.59l-5.59,-5.59l-1.41,1.41l5.59,5.59l-5.59,5.59l1.41,1.41l5.59,-5.59l5.59,5.59l1.41,-1.41l-5.59,-5.59z"/></svg>`,
+        ERROR = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M12,2c-5.52,0,-10,4.48,-10,10s4.48,10,10,10s10,-4.48,10,-10s-4.48,-10,-10,-10zm1,15h-2v-2h2v2zm0,-4h-2v-6h2v6z"/></svg>`,
+        LAPTOP = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M20,18c1.1,0,2,-0.9,2,-2v-10c0,-1.1,-0.9,-2,-2,-2h-16c-1.1,0,-2,0.9,-2,2v10c0,1.1,0.9,2,2,2h-4v2h24v-2h-4zm-16,-12h16v10h-16v-10z"/></svg>`,
+        CLOUD = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19.35,10.04c-0.68,-3.45,-3.71,-6.04,-7.35,-6.04c-2.89,0,-5.4,1.64,-6.65,4.04c-3.01,0.32,-5.35,2.87,-5.35,5.96c0,3.31,2.69,6,6,6h13c2.76,0,5,-2.24,5,-5c0,-2.64,-2.05,-4.78,-4.65,-4.96z"/></svg>`,
+        LABEL = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M17.63,5.84c-0.36,-0.51,-0.96,-0.84,-1.63,-0.84l-11,0.01c-1.1,0,-2,0.89,-2,1.99v10c0,1.1,0.9,1.99,2,1.99l11,0.01c0.67,0,1.27,-0.33,1.63,-0.84l4.37,-6.16l-4.37,-6.16z"/></svg>`,
+        STASH = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19,3h-14.01c-1.11,0,-1.98,0.89,-1.98,2l-0.01,14c0,1.1,0.88,2,1.99,2h14.01c1.1,0,2,-0.9,2,-2v-14c0,-1.11,-0.9,-2,-2,-2zm0,12h-4c0,1.66,-1.35,3,-3,3s-3,-1.34,-3,-3h-4.01v-10h14.01v10z"/></svg>`
     }
 
     export function getIcon(type: Type, classes: string = "", id: string = null): string {
         const str = `${classes.length > 0 ? "class=\"" + classes + "\" " : ""}${id != null ? "id=\"" + id + "\"" : ""} `;
         return type.slice(0, 5) + str + type.slice(5);
+    }
+    
+    export function getPath(type: Type, keepMoveto: boolean = true): string {
+        const path = getIcon(type).match(/\sd="(.*?)"/ui)[1];
+        return keepMoveto ? path : path.match(/M[0-9\s,\.]*(.*)/ui)[1];
     }
 
 }
@@ -45,7 +51,7 @@ class CommitCache {
     }
 
     public addAll(...commits: Array<Commit>): void {
-        const coms = commits.map(commit => new Commit(commit, this)).filter((commit: Commit) => this.commits.filter((cm: Commit) => cm.id === commit.id).length === 0);
+        const coms = commits.map(commit => new Commit(commit, this)).filter((commit: Commit) => this.commits.filter((cm: Commit) => cm.id === commit.id).length === 0).sort((a, b) => b.date.getTime() - a.date.getTime());
         this.commits.push(...coms);
         const intervalId = <any> setInterval(() => {
             if (coms.length === 0)
@@ -120,7 +126,7 @@ class Commit {
      * Returns whether this is a merge commit
      */
     public isBranchMerge(): boolean {
-        return this.parents.length > 1;
+        return !this.isStash && this.parents.length > 1;
     }
 
     /**
@@ -155,31 +161,32 @@ class Commit {
     }
 
     public display(): void {
-        if (!this.isStash) {
-            this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
-            const tags = this.commitCache.view.createElement(null, "tagContainer");
-            const id = this.commitCache.view.createElement(null, "id");
-            id.innerText = this.id.substr(0, 7);
-            const message = this.commitCache.view.createElement(null, "message");
-            message.innerText = this.summary;
-            const author = this.commitCache.view.createElement(null, "author");
-            author.innerText = this.authorName;
-            const date = this.commitCache.view.createElement(null, "date");
-            date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
-            this.element.append(tags, id, message, author, date);
-            document.getElementById("commit-graph").appendChild(this.element);
-            this.displayGraph();
-        } else {
+        this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
+        const tags = this.commitCache.view.createElement(null, "tagContainer");
+        const id = this.commitCache.view.createElement(null, "id");
+        id.innerText = this.id.substr(0, 7);
+        const message = this.commitCache.view.createElement(null, "message");
+        message.innerText = this.summary;
+        const author = this.commitCache.view.createElement(null, "author");
+        author.innerText = this.authorName;
+        const date = this.commitCache.view.createElement(null, "date");
+        date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
+        this.element.append(tags, id, message, author, date);
+        document.getElementById("commit-graph").appendChild(this.element);
+        this.displayGraph();
+
+        if (this.isStash) {
             const listElem = document.getElementById(`stashList`);
             if (listElem == null) return;
             const ref = this.commitCache.view.createElement(null, "ref", "smooth");
             ref.innerText = this.summary;
             listElem.appendChild(ref);
+            this.attachHead(`refs/stash/${this.commitCache.view.getLocale("editor.git.stash.display_name")} ${this.stashId}`);
         }
     }
 
     public getChildren(): Array<Commit> {
-        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id) && !commit.isStash).sort((a, b) => b.date.getTime() - a.date.getTime());
+        return this.commitCache.commits.filter((commit) => commit.parents.includes(this.id)).sort((a, b) => b.date.getTime() - a.date.getTime());
     }
 
     public getParents(): Array<Commit> {
@@ -221,10 +228,10 @@ class Commit {
                 else if (children.isBranchHeadMerge() || (this.isBranchSplit() && children.isBranchUpdate())) {
                     dPath += `M ${pos.x} ${pos.y - radius} V ${childPos.y + this.element.clientHeight - radius} Q ${pos.x} ${childPos.y} ${pos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? -1 : 1)} ${childPos.y} H ${childPos.x + (this.commitLine > children.commitLine ? 1 : -1) * radius}`;
                 } else if (this.isBranchSplit() && !children.isBranchUpdate()) {
-                    dPath += `M ${pos.x + (this.commitLine > children.commitLine ? -1 : 1) * radius} ${pos.y} H ${childPos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? 1 : -1)} Q ${childPos.x} ${pos.y} ${childPos.x} ${childPos.y + radius}`
+                    dPath += `M ${pos.x + (this.commitLine > children.commitLine ? -1 : 1) * radius} ${pos.y} H ${childPos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? 1 : -1)} Q ${childPos.x} ${pos.y} ${childPos.x} ${Math.max(pos.y - this.commitLineSize, childPos.y + radius)} V ${childPos.y + radius}`
                 }
             }
-
+            
             path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
 
             const elem = document.getElementById("graphic-graph");
@@ -283,8 +290,8 @@ class Commit {
      */
     public attachHead(refName: string): void {
         const tag = this.commitCache.view.createElement(`ref-${refName}`, "ref", "smooth");
-        tag.innerHTML = Icon.getIcon(refName.includes("head") ? Icon.Type.LAPTOP : refName.includes("remotes") ? Icon.Type.CLOUD : Icon.Type.LABEL, "tooltipIcon") + refName.split("/").pop();
-        const color = refName.includes("tag") ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
+        tag.innerHTML = Icon.getIcon(refName.includes("head") ? Icon.Type.LAPTOP : refName.includes("remotes") ? Icon.Type.CLOUD : refName.includes("tag") ? Icon.Type.LABEL: Icon.Type.STASH, "tooltipIcon") + refName.split("/").pop();
+        const color = refName.includes("tag") || refName.includes("stash") ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
         tag.style.background = color;
         this.element.getElementsByClassName("tagContainer")[0].appendChild(tag);
         const pos = this.getPosition();
@@ -298,7 +305,7 @@ class Commit {
                 event.dataTransfer.setData("activator/graph", "activator");
                 for (const elem of <any> document.getElementById("commit-graph").getElementsByClassName("ref")) {
                     if (elem.id.includes("tag") || elem.id.includes("stash") || elem === tag)
-                        elem.style.opacity = .5;
+                        elem.style.opacity = .3;
                 }
                 activated = true;
             });
@@ -474,13 +481,13 @@ class View {
         const containerContents = this.createElement("containerContents", "containerContents");
         const networkList = this.createElement("networkList", "networkList", "verticalList");
         const localBranches = this.createElement("headsList", "list");
-        localBranches.innerText = this.getLocale("editor.git.branch.name");
+        localBranches.innerHTML = Icon.getIcon(Icon.Type.LAPTOP) + this.getLocale("editor.git.branch.name");
         const remotes = this.createElement("remotesList", "list");
-        remotes.innerText = this.getLocale("editor.git.remote.name");
+        remotes.innerHTML = Icon.getIcon(Icon.Type.CLOUD) + this.getLocale("editor.git.remote.name");
         const tags = this.createElement("tagsList", "list");
-        tags.innerText = this.getLocale("editor.git.tag.name");
+        tags.innerHTML = Icon.getIcon(Icon.Type.LABEL) + this.getLocale("editor.git.tag.name");
         const stashes = this.createElement("stashList", "list");
-        stashes.innerText = this.getLocale("editor.git.stash.name");
+        stashes.innerHTML = Icon.getIcon(Icon.Type.STASH) + this.getLocale("editor.git.stash.name");
         networkList.append(localBranches, remotes, tags, stashes);
         containerContents.appendChild(networkList);
 
@@ -529,7 +536,7 @@ class View {
                     event.dataTransfer.setData("activator/menu", "activator");
                     for (const elem of <any> document.getElementById("networkList").getElementsByClassName("ref")) {
                         if ((!elem.parentElement.id.includes("remote") && !elem.parentElement.id.includes("head")) || elem === ref)
-                            elem.style.opacity = .5;
+                            elem.style.opacity = .3;
                     }
                     activated = true;
                 });
