@@ -1,1 +1,7 @@
 Copyright (c) 2020 AlbanSdl
+
+This project uses:
+Electron (MIT Licence) -- Website: https://www.electronjs.org/
+Nodegit (MIT Licence) -- Website: https://www.nodegit.org/
+The "Source Sans Pro" font (OFL Licence) -- Web page: https://fonts.google.com/specimen/Source+Sans+Pro
+Icons from "material.io" (Apache Licence 2.0) -- Web page: https://material.io/resources/icons/

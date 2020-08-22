@@ -1,10 +1,29 @@
 export namespace Ascript {
 
+    /**
+     * This interface denotes that the object can be sent to the user and will appear
+     * on the screen. A such object can be dismissed at any time.
+     */
+    interface Sendable {
+
+        /**
+         * Displays the element on the screen with the chosen properties
+         */
+        send(): void
+
+        /**
+         * Remove the element from the screen, removing itself at the end
+         * of its vanishing animation
+         */
+        dismiss(): void
+
+    }
+
     const localeStrings: Array<Array<string>> = [
         ["Erreur ", "Error "],
         ["Une erreur s'est produite... Les données n'ont pas pu être envoyées: ", "An error occurred... Data has not been sent: "],
         ["Connexion interrompue", "Connection lost"],
-        ["Il n'y a pas d'élément .notif ! Ajoute en avec ANotification.send()", "No such element .notif ! Summon some notification with ANotification.send() before…"],
+        ["Il n'y a pas d'élément .notif ! Ajoute en avec Ascript.Notification.send()", "No such element .notif ! Summon some notification with Ascript.Notification.send() before…"],
         ["Élément copié !", "Copied item !"],
         ["Impossible d'afficher le graphique à cause de votre navigateur...", "Unable to display chart because of your browser..."],
         ["La notification a déjà été envoyée !", "Notification already sent !"],
@@ -387,7 +406,7 @@ export namespace Ascript {
         elementParent.appendChild(chart);
     }
 
-    export class Notification {
+    export class Notification implements Sendable {
 
         private content: string;
         private duration: number;
@@ -526,15 +545,15 @@ export namespace Ascript {
                 marginTop: '10px', minHeight: '50px', pointerEvents: 'all', alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row-reverse'
             });
             if (notifQueueTimed.length > 7)
-                notifQueue.get(notifQueueTimed[0]).hide();
+                notifQueue.get(notifQueueTimed[0]).dismiss();
             notifQueueTimed.push(this.id);
             notifQueue.set(this.id, this);
             document.getElementById('notif-holder').appendChild(this.elemNotif);
             Ascript.fadeInElement(this.elemNotif, '1', .2, 'flex');
             Ascript.addRippleListener(<HTMLElement>this.elemNotif.getElementsByClassName('notif-close')[0]);
-            this.notifTimer = setTimeout(() => { this.hide() }, this.duration * 1000);
+            this.notifTimer = setTimeout(() => { this.dismiss() }, this.duration * 1000);
             this.elemNotif.getElementsByClassName('notif-close')[0].addEventListener('click', () => {
-                this.hide();
+                this.dismiss();
                 clearTimeout(this.notifTimer);
             });
         }
@@ -542,7 +561,7 @@ export namespace Ascript {
         /**
          * Hides the current notification (and deletes it)
          */
-        public hide(): void {
+        public dismiss(): void {
             if (this.id !== null && document.getElementById(this.id.toString()) === this.elemNotif) {
                 notifQueueTimed.splice(notifQueueTimed.indexOf(this.id), 1);
                 notifQueue.delete(this.id);
@@ -554,7 +573,7 @@ export namespace Ascript {
 
     };
 
-    export class Popup {
+    export class Popup implements Sendable {
 
         private id: string;
         private content: string;
@@ -746,12 +765,12 @@ export namespace Ascript {
                 zIndex: '9999'
             });
             fade.addEventListener('click', () => {
-                this.hide();
+                this.dismiss();
             });
             document.body.appendChild(fade);
             Ascript.fadeInElement(fade, '0.8');
             closeButton.addEventListener('click', () => {
-                this.hide();
+                this.dismiss();
             });
             Ascript.initRipple('popupClose');
             setTimeout(() => {
@@ -773,7 +792,7 @@ export namespace Ascript {
         /**
          * Hides the current popup (and deletes it)
          */
-        public hide(): void {
+        public dismiss(): void {
             if (this.id !== null && document.getElementById(this.id) != null) {
                 Ascript.fadeOutElement(document.getElementById(this.fadeId), true);
                 Ascript.fadeOutElement(document.getElementById(this.id), true);
@@ -789,7 +808,7 @@ export namespace Ascript {
      * Creates showcases in the window. Showcases can't be displayed at the same time.
      * @type {Ascript.ShowCase}
      */
-    export class ShowCase {
+    export class ShowCase implements Sendable {
 
         private element: HTMLElement;
         private background: string;
@@ -804,7 +823,7 @@ export namespace Ascript {
             this.background = '#222';
             this.textColor = '#fff';
             this.onDismiss = null;
-            this.substitutionElement = <HTMLElement> this.element.cloneNode(true);
+            this.substitutionElement = <HTMLElement>this.element.cloneNode(true);
             this.content = "";
             this.title = "";
         }
@@ -834,7 +853,7 @@ export namespace Ascript {
             return this;
         }
 
-        public display(): void {
+        public send(): void {
             if (document.getElementById('showcase') != null)
                 return console.error("Only one showcase can be displayed at once !");
             const showcaseElement = document.createElement("div");
