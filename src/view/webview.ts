@@ -15,17 +15,103 @@ namespace Icon {
         LAPTOP = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M20,18c1.1,0,2,-0.9,2,-2v-10c0,-1.1,-0.9,-2,-2,-2h-16c-1.1,0,-2,0.9,-2,2v10c0,1.1,0.9,2,2,2h-4v2h24v-2h-4zm-16,-12h16v10h-16v-10z"/></svg>`,
         CLOUD = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19.35,10.04c-0.68,-3.45,-3.71,-6.04,-7.35,-6.04c-2.89,0,-5.4,1.64,-6.65,4.04c-3.01,0.32,-5.35,2.87,-5.35,5.96c0,3.31,2.69,6,6,6h13c2.76,0,5,-2.24,5,-5c0,-2.64,-2.05,-4.78,-4.65,-4.96z"/></svg>`,
         LABEL = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M17.63,5.84c-0.36,-0.51,-0.96,-0.84,-1.63,-0.84l-11,0.01c-1.1,0,-2,0.89,-2,1.99v10c0,1.1,0.9,1.99,2,1.99l11,0.01c0.67,0,1.27,-0.33,1.63,-0.84l4.37,-6.16l-4.37,-6.16z"/></svg>`,
-        STASH = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19,3h-14.01c-1.11,0,-1.98,0.89,-1.98,2l-0.01,14c0,1.1,0.88,2,1.99,2h14.01c1.1,0,2,-0.9,2,-2v-14c0,-1.11,-0.9,-2,-2,-2zm0,12h-4c0,1.66,-1.35,3,-3,3s-3,-1.34,-3,-3h-4.01v-10h14.01v10z"/></svg>`
+        STASH = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19,3h-14.01c-1.11,0,-1.98,0.89,-1.98,2l-0.01,14c0,1.1,0.88,2,1.99,2h14.01c1.1,0,2,-0.9,2,-2v-14c0,-1.11,-0.9,-2,-2,-2zm0,12h-4c0,1.66,-1.35,3,-3,3s-3,-1.34,-3,-3h-4.01v-10h14.01v10z"/></svg>`,
+        STASH_POINT = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M12,2c-5.53,0,-10,4.47,-10,10s4.47,10,10,10s10,-4.47,10,-10s-4.47,-10,-10,-10zm5,13.59l-1.41,1.41l-3.59,-3.59l-3.59,3.59l-1.41,-1.41l3.59,-3.59l-3.59,-3.59l1.41,-1.41l3.59,3.59l3.59,-3.59l1.41,1.41l-3.59,3.59l3.59,3.59z"/></svg>`,
     }
 
     export function getIcon(type: Type, classes: string = "", id: string = null): string {
         const str = `${classes.length > 0 ? "class=\"" + classes + "\" " : ""}${id != null ? "id=\"" + id + "\"" : ""} `;
         return type.slice(0, 5) + str + type.slice(5);
     }
-    
-    export function getPath(type: Type, keepMoveto: boolean = true): string {
+
+    export function getPath(type: Type, keepMoveto: boolean = true, scale: number = 1): string {
         const path = getIcon(type).match(/\sd="(.*?)"/ui)[1];
-        return keepMoveto ? path : path.match(/M[0-9\s,\.]*(.*)/ui)[1];
+        let ret = keepMoveto ? path : path.match(/M[0-9\s,\.]*(.*)/ui)[1];
+        if (scale !== 1) {
+            let regRes;
+            const regex = /\d+(\.\d+)?/mug;
+            let int = 0;
+            while ((regRes = regex.exec(ret)) !== null && int < 100) {
+                int++;
+                const newValue = (Number.parseFloat(regRes[0]) * scale).toString();
+                ret = ret.slice(0, regex.lastIndex - regRes[0].length) + newValue + ret.slice(regex.lastIndex);
+                regex.lastIndex += newValue.length - regRes[0].length;
+            }
+        }
+        return ret;
+    }
+
+}
+
+namespace Reference {
+
+    export class Type {
+
+        public readonly name: string;
+        public readonly icon: Icon.Type;
+        public readonly isBranch: boolean;
+        private readonly applicationTo: Map<Type, (context: Commit, from: string, to: string) => any> = new Map();
+
+        constructor(name: string, icon: Icon.Type, isBranch: boolean) {
+            this.name = name;
+            this.icon = icon;
+            this.isBranch = isBranch;
+        }
+
+        public getSimpleName(): string {
+            return this.name.split("/").pop();
+        }
+
+        registerApplication(toType: Type, listener: (context: Commit, from: string, to: string) => any) {
+            this.applicationTo.set(toType, listener);
+        }
+
+        public performOperation(context: Commit, refFrom: string, refTo: string): void {
+            const computable = this.applicationTo.get(getType(refTo));
+            if (computable != null) computable(context, refFrom, refTo);
+        }
+
+        public isApplicable(refTo?: string | Type): boolean {
+            if (refTo == null) return this.applicationTo.size !== 0;
+            if (typeof refTo === 'string') refTo = getType(refTo);
+            return this.applicationTo.has(refTo);
+        }
+
+        public getApplicableTypes(): IterableIterator<Type> {
+            return this.applicationTo.keys();
+        }
+    }
+
+    export const HEAD = new Type("refs/heads", Icon.Type.LAPTOP, true);
+    export const REMOTE = new Type("refs/remotes", Icon.Type.CLOUD, true);
+    export const TAG = new Type("refs/tags", Icon.Type.LABEL, false);
+    export const STASH = new Type("refs/stash", Icon.Type.STASH, false);
+
+    /* Applications */
+    HEAD.registerApplication(HEAD, (context, from, to) => {
+        context.commitCache.view.mergeElements(from, to);
+    });
+    HEAD.registerApplication(REMOTE, (context, from, to) => {
+        context.commitCache.view.pushTo(from, to);
+    });
+    REMOTE.registerApplication(HEAD, (context, from, to) => {
+        context.commitCache.view.pullTo(from, to);
+    });
+    STASH.registerApplication(HEAD, (context, from, to) => {
+        context.commitCache.view.applyStash(from, to);
+    });
+
+    export function* getTypes(): Iterable<Type> {
+        yield HEAD;
+        yield REMOTE;
+        yield TAG;
+        yield STASH;
+    }
+
+    export function getType(ref: string | HTMLElement): Type {
+        for (var refType of getTypes())
+            if ((typeof ref === 'string' && ref.startsWith(refType.name))
+                || (ref instanceof HTMLElement && ref.parentElement.id.includes(refType.getSimpleName()))) return refType;
     }
 
 }
@@ -53,7 +139,7 @@ class CommitCache {
     public addAll(...commits: Array<Commit>): void {
         const coms = commits.map(commit => new Commit(commit, this)).filter((commit: Commit) => this.commits.filter((cm: Commit) => cm.id === commit.id).length === 0).sort((a, b) => b.date.getTime() - a.date.getTime());
         this.commits.push(...coms);
-        const intervalId = <any> setInterval(() => {
+        const intervalId = <any>setInterval(() => {
             if (coms.length === 0)
                 return clearInterval(intervalId);
             coms.shift().display();
@@ -122,6 +208,13 @@ class Commit {
         return this.message.split(EOL).splice(2).join(EOL);
     }
 
+    public getSummary(): string {
+        if (!this.isStash) return this.summary;
+        const sumParts = this.summary.split(":");
+        sumParts.shift();
+        return sumParts.join(":").replace(/^\s*/mgu, "");
+    }
+
     /**
      * Returns whether this is a merge commit
      */
@@ -166,7 +259,7 @@ class Commit {
         const id = this.commitCache.view.createElement(null, "id");
         id.innerText = this.id.substr(0, 7);
         const message = this.commitCache.view.createElement(null, "message");
-        message.innerText = this.summary;
+        message.innerText = this.getSummary();
         const author = this.commitCache.view.createElement(null, "author");
         author.innerText = this.authorName;
         const date = this.commitCache.view.createElement(null, "date");
@@ -175,14 +268,8 @@ class Commit {
         document.getElementById("commit-graph").appendChild(this.element);
         this.displayGraph();
 
-        if (this.isStash) {
-            const listElem = document.getElementById(`stashList`);
-            if (listElem == null) return;
-            const ref = this.commitCache.view.createElement(null, "ref", "smooth");
-            ref.innerText = this.summary;
-            listElem.appendChild(ref);
-            this.attachHead(`refs/stash/${this.commitCache.view.getLocale("editor.git.stash.display_name")} ${this.stashId}`);
-        }
+        if (this.isStash)
+            this.commitCache.view.registerNetworkPart(`refs/stash/${this.id}`, this.id);
     }
 
     public getChildren(): Array<Commit> {
@@ -214,30 +301,36 @@ class Commit {
 
             let color = this.commitCache.view.getLocale(`editor.git.graph.color.${this.commitLine % 8}`);
             if (!/^#([a-f0-9]{3}){1,2}$/iu.test(color)) color = "#fff";
-            path.setAttribute("stroke", color);
-            path.setAttribute("stroke-width", "2px");
-            path.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
             const pos = this.getPosition();
-            const radius = Commit.radius;
-
-            let dPath = "";
-            for (let children of this.getChildren()) {
-                const childPos = children.getPosition();
-                if (children.commitLine === this.commitLine) dPath += `M ${pos.x} ${pos.y - radius} V ${childPos === pos ? childPos.y - radius : childPos.y + radius}`;
-                else if (children.isBranchHeadMerge() || (this.isBranchSplit() && children.isBranchUpdate())) {
-                    dPath += `M ${pos.x} ${pos.y - radius} V ${childPos.y + this.element.clientHeight - radius} Q ${pos.x} ${childPos.y} ${pos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? -1 : 1)} ${childPos.y} H ${childPos.x + (this.commitLine > children.commitLine ? 1 : -1) * radius}`;
-                } else if (this.isBranchSplit() && !children.isBranchUpdate()) {
-                    dPath += `M ${pos.x + (this.commitLine > children.commitLine ? -1 : 1) * radius} ${pos.y} H ${childPos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? 1 : -1)} Q ${childPos.x} ${pos.y} ${childPos.x} ${Math.max(pos.y - this.commitLineSize, childPos.y + radius)} V ${childPos.y + radius}`
+            path.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            if (!this.isStash) {
+                path.setAttribute("stroke", color);
+                path.setAttribute("stroke-width", "2px");
+                const radius = Commit.radius;
+                let dPath = "";
+                for (let children of this.getChildren()) {
+                    const childPos = children.getPosition();
+                    if (children.commitLine === this.commitLine) dPath += `M ${pos.x} ${pos.y - radius} V ${childPos === pos ? childPos.y - radius : childPos.y + radius}`;
+                    else if (children.isBranchHeadMerge() || (this.isBranchSplit() && children.isBranchUpdate())) {
+                        dPath += `M ${pos.x} ${pos.y - radius} V ${childPos.y + this.element.clientHeight - radius} Q ${pos.x} ${childPos.y} ${pos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? -1 : 1)} ${childPos.y} H ${childPos.x + (this.commitLine > children.commitLine ? 1 : -1) * radius}`;
+                    } else if (this.isBranchSplit() && !children.isBranchUpdate()) {
+                        dPath += `M ${pos.x + (this.commitLine > children.commitLine ? -1 : 1) * radius} ${pos.y} H ${childPos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? 1 : -1)} Q ${childPos.x} ${pos.y} ${childPos.x} ${Math.max(pos.y - this.commitLineSize, childPos.y + radius)} V ${childPos.y + radius}`
+                    }
                 }
+                path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
+            } else {
+                const sc = .5;
+                path.setAttribute("stroke", "none");
+                path.style.fill = color;
+                path.style.width = "10px";
+                path.setAttribute("d", `M ${pos.x} ${pos.y - 10 * sc} ${Icon.getPath(Icon.Type.STASH_POINT, false, sc)}`);
             }
-            
-            path.setAttribute("d", `${dPath} M ${pos.x - radius} ${pos.y} a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${radius * -2} 0 Z`);
+
 
             const elem = document.getElementById("graphic-graph");
             if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize) {
                 elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
-                for (const child of <any> elem.children) {
+                for (const child of <any>elem.children) {
                     if (child.id.includes("ref")) {
                         const d = child.getAttribute("d");
                         const reg = /H\s?(\d*)/ui;
@@ -288,40 +381,45 @@ class Commit {
     /**
      * Register a branch head at this commit
      */
-    public attachHead(refName: string): void {
+    public attachHead(refName: string, display?: string): void {
+        const refType = Reference.getType(refName);
         const tag = this.commitCache.view.createElement(`ref-${refName}`, "ref", "smooth");
-        tag.innerHTML = Icon.getIcon(refName.includes("head") ? Icon.Type.LAPTOP : refName.includes("remotes") ? Icon.Type.CLOUD : refName.includes("tag") ? Icon.Type.LABEL: Icon.Type.STASH, "tooltipIcon") + refName.split("/").pop();
-        const color = refName.includes("tag") || refName.includes("stash") ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
+        tag.innerHTML = Icon.getIcon(refType.icon, "tooltipIcon") + (display == null ? refName.split("/").pop() : display);
+        const color = !refType.isBranch ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
         tag.style.background = color;
         this.element.getElementsByClassName("tagContainer")[0].appendChild(tag);
         const pos = this.getPosition();
 
-        if (refName.includes("head") || refName.includes("remote")) {
+        if (refType.isApplicable()) {
             tag.draggable = true;
             tag.style.cursor = "grab";
-            let activated = false;
             tag.addEventListener('dragstart', (event) => {
-                event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName, commit: this.id }));
-                event.dataTransfer.setData("activator/graph", "activator");
-                for (const elem of <any> document.getElementById("commit-graph").getElementsByClassName("ref")) {
-                    if (elem.id.includes("tag") || elem.id.includes("stash") || elem === tag)
+                event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
+                event.dataTransfer.setData(`activator/activated/${refName}`, "activator");
+                for (const appType of refType.getApplicableTypes())
+                    event.dataTransfer.setData(`activator/graph/${appType.getSimpleName()}`, "activator");
+                for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                    if (!refType.isApplicable(elem.id.slice(4)) || elem === tag)
                         elem.style.opacity = .3;
-                }
-                activated = true;
+                for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                    if (!refType.isApplicable(Reference.getType(elem)) || elem.id.slice(9) === refName)
+                        elem.style.opacity = .3;
             });
             tag.addEventListener('dragend', () => {
-                for (const elem of <any> document.getElementById("commit-graph").getElementsByClassName("ref")) {
-                    if (elem.id.includes("tag") || elem.id.includes("stash") || elem === tag)
+                for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                    if (!refType.isApplicable(elem.id.slice(4)) || elem === tag)
                         elem.style.opacity = 1;
-                }
-                activated = false;
+                for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                    if (!refType.isApplicable(Reference.getType(elem)) || elem.id.slice(9) === refName)
+                        elem.style.opacity = 1;
             })
             tag.addEventListener('dragover', (event) => {
-                if (event.dataTransfer.types.includes("activator/graph") && !activated) event.preventDefault();
+                if (event.dataTransfer.types.includes(`activator/graph/${refType.getSimpleName()}`) &&
+                    !event.dataTransfer.types.includes(`activator/activated/${refName}`)) event.preventDefault();
             })
             tag.addEventListener('drop', (event) => {
                 const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
-                this.commitCache.view.mergeElements(dataFrom.ref, refName);
+                Reference.getType(dataFrom.ref).performOperation(this, dataFrom.ref, refName);
             });
         }
 
@@ -341,7 +439,7 @@ class Commit {
 class View {
 
     private isLoading: boolean;
-    private readonly recentRepos: Array<{name: string, path: string}>;
+    private readonly recentRepos: Array<{ name: string, path: string }>;
     public commitCache: CommitCache;
     private readonly cachedLocales: Map<string, string>;
 
@@ -361,7 +459,7 @@ class View {
 
     public setLoaded(loaded: boolean): void {
         if (this.isLoading && loaded)
-            Ascript.fadeOutElement(<HTMLElement> document.getElementsByClassName("splash")[0], true);
+            Ascript.fadeOutElement(<HTMLElement>document.getElementsByClassName("splash")[0], true);
         this.isLoading = !loaded;
     }
 
@@ -389,7 +487,7 @@ class View {
         const card = this.createElement(id, "card", "smooth");
         if (iconType != null) {
             card.innerHTML = Icon.getIcon(iconType, "icon");
-            for (const path of <any> card.getElementsByTagName("svg")[0].children)
+            for (const path of <any>card.getElementsByTagName("svg")[0].children)
                 if (path instanceof SVGPathElement)
                     path.style.strokeDasharray = path.style.strokeDashoffset = path.getTotalLength().toString();
         }
@@ -408,7 +506,7 @@ class View {
     }
 
     public setTitle(title: string): void {
-        (<HTMLElement> document.getElementById("appBar").getElementsByClassName("title")[0]).innerText = title;
+        (<HTMLElement>document.getElementById("appBar").getElementsByClassName("title")[0]).innerText = title;
     }
 
     public loadMainMenu(): void {
@@ -480,17 +578,12 @@ class View {
         // Contents
         const containerContents = this.createElement("containerContents", "containerContents");
         const networkList = this.createElement("networkList", "networkList", "verticalList");
-        const localBranches = this.createElement("headsList", "list");
-        localBranches.innerHTML = Icon.getIcon(Icon.Type.LAPTOP) + this.getLocale("editor.git.branch.name");
-        const remotes = this.createElement("remotesList", "list");
-        remotes.innerHTML = Icon.getIcon(Icon.Type.CLOUD) + this.getLocale("editor.git.remote.name");
-        const tags = this.createElement("tagsList", "list");
-        tags.innerHTML = Icon.getIcon(Icon.Type.LABEL) + this.getLocale("editor.git.tag.name");
-        const stashes = this.createElement("stashList", "list");
-        stashes.innerHTML = Icon.getIcon(Icon.Type.STASH) + this.getLocale("editor.git.stash.name");
-        networkList.append(localBranches, remotes, tags, stashes);
+        for (const ref of Reference.getTypes()) {
+            const branch = this.createElement(`${ref.getSimpleName()}List`, "list");
+            branch.innerHTML = Icon.getIcon(ref.icon) + this.getLocale(`editor.git.${ref.getSimpleName()}.name`);
+            networkList.append(branch);
+        }
         containerContents.appendChild(networkList);
-
         const graphContainer = this.createElement(null, 'commit-graph-container');
         const graphTempContainer = this.createElement(null, 'graph-container');
         const graphicGraph = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -511,48 +604,58 @@ class View {
     }
 
     public registerNetworkPart(refName: string, head: string): void {
-        if (refName.indexOf("stash") < 0) {
+        const refType = Reference.getType(refName);
+        if (refName !== refType.name) {
             const match = refName.match(/refs\/([^\/]+)/mu);
             if (match == null || match.length < 1) return;
             const listElem = document.getElementById(`${match[1]}List`);
             if (listElem == null) return;
-            const ref = this.createElement(null, "ref", "smooth");
-            ref.innerText = refName.substr(match[0].length + 1);
-            if (match[1] === "heads") {
+            const ref = this.createElement(`ref-menu-${refName}`, "ref", "smooth");
+            if (refType !== Reference.STASH) ref.innerText = refName.substr(match[0].length + 1);
+            if (refType === Reference.HEAD)
                 ref.addEventListener('dblclick', () => {
                     ipcRenderer.send("lifecycle", "checkout", refName);
                 });
-            }
             listElem.appendChild(ref);
 
-            this.commitCache.getPlacedCommit(head).then((commit) => commit.attachHead(refName));
+            this.commitCache.getPlacedCommit(head).then((commit) => {
+                if (commit.isStash) {
+                    ref.innerText = commit.getSummary();
+                    commit.attachHead(refName, `${this.getLocale("editor.git.stash.display_name")} ${commit.stashId}`);
+                } else
+                    commit.attachHead(refName);
+            });
 
-            if (refName.indexOf("tag") < 0) {
+            if (refType.isApplicable()) {
                 ref.draggable = true;
                 ref.style.cursor = "grab";
-                let activated = false;
                 ref.addEventListener('dragstart', (event) => {
                     event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
-                    event.dataTransfer.setData("activator/menu", "activator");
-                    for (const elem of <any> document.getElementById("networkList").getElementsByClassName("ref")) {
-                        if ((!elem.parentElement.id.includes("remote") && !elem.parentElement.id.includes("head")) || elem === ref)
+                    event.dataTransfer.setData(`activator/activated/${refName}`, "activator");
+                    for (const appType of refType.getApplicableTypes())
+                        event.dataTransfer.setData(`activator/graph/${appType.getSimpleName()}`, "activator");
+                    for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                        if (!refType.isApplicable(Reference.getType(elem)) || elem === ref)
                             elem.style.opacity = .3;
-                    }
-                    activated = true;
+                    for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                        if (!refType.isApplicable(elem.id.slice(4)) || elem.id.slice(4) === refName)
+                            elem.style.opacity = .3;
                 });
                 ref.addEventListener('dragend', () => {
-                    for (const elem of <any> document.getElementById("networkList").getElementsByClassName("ref")) {
-                        if ((!elem.parentElement.id.includes("remote") && !elem.parentElement.id.includes("head")) || elem === ref)
+                    for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                        if (!refType.isApplicable(Reference.getType(elem)) || elem === ref)
                             elem.style.opacity = 1;
-                    }
-                    activated = false;
+                    for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                        if (!refType.isApplicable(elem.id.slice(4)) || elem.id.slice(4) === refName)
+                            elem.style.opacity = 1;
                 })
                 ref.addEventListener('dragover', (event) => {
-                    if (event.dataTransfer.types.includes("activator/menu") && !activated) event.preventDefault();
+                    if (event.dataTransfer.types.includes(`activator/graph/${refType.getSimpleName()}`) &&
+                        !event.dataTransfer.types.includes(`activator/activated/${refName}`)) event.preventDefault();
                 })
                 ref.addEventListener('drop', (event) => {
                     const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
-                    this.commitCache.view.mergeElements(dataFrom.ref, refName);
+                    Reference.getType(dataFrom.ref).performOperation(this.commitCache.commits[0], dataFrom.ref, refName);
                 });
             }
         }
@@ -570,8 +673,20 @@ class View {
         return cached != null ? cached : this.cachedLocales.get(string_id);
     }
 
-    public mergeElements(elem_from: string, elem_to: string): void {
-        new Ascript.Popup("merge").setTitle(`Merging ${elem_from} to ${elem_to}`).setContent("This is still work in progress").send();
+    public mergeElements(ref_from: string, ref_to: string): void {
+        new Ascript.Popup("merge").setTitle(`Merging ${ref_from} into ${ref_to}`).setContent("This is still work in progress").send();
+    }
+
+    public pushTo(ref_from: string, ref_to: string): void {
+        new Ascript.Popup("merge").setTitle(`Pushing ${ref_from} to ${ref_to}`).setContent("This is still work in progress").send();
+    }
+
+    public pullTo(ref_from: string, ref_to: string): void {
+        new Ascript.Popup("merge").setTitle(`Pulling ${ref_from} to ${ref_to}`).setContent("This is still work in progress").send();
+    }
+
+    public applyStash(stash_from: string, ref_to: string): void {
+        new Ascript.Popup("merge").setTitle(`Applying stash ${stash_from} into ${ref_to}`).setContent("This is still work in progress").send();
     }
 
     public removeElement(elem: HTMLElement, animation: TransitionEffect, duration: number = .5) {
@@ -588,8 +703,8 @@ class View {
         if (isSlidingLeft && isSlidingRight || isSlidingTop && isSlidingBottom)
             throw new Error(`Incompatible directions: flag ${animation} is invalid.`);
 
-        if ((<any> elem).fadeTimeout != null)
-            clearTimeout((<any> elem).fadeTimeout);
+        if ((<any>elem).fadeTimeout != null)
+            clearTimeout((<any>elem).fadeTimeout);
 
         if (isFading) elem.style.opacity = '1';
         elem.style.transition = `all ${duration}s ease-in-out`;
@@ -605,7 +720,7 @@ class View {
             elem.style.marginTop = (isSlidingTop ? -1 : 1) * window.innerHeight + "px";
         }
 
-        (<any> elem).fadeTimeout = setTimeout(() => {
+        (<any>elem).fadeTimeout = setTimeout(() => {
             if (elem.parentElement != null)
                 elem.parentElement.removeChild(elem);
         }, 800);
