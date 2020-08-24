@@ -567,6 +567,7 @@ path.tagLink {
     left: 50%;
     transform: translateX(-50%);
     pointer-events: none;
+    font-size: 14px;
 }
 .tooltip::after {
     content: "";

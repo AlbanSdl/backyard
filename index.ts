@@ -1,8 +1,10 @@
 import { app, BrowserWindow } from "electron";
-import { AppNotification } from "./src/app/Notification";
+import { AppNotification, NotificationIcon } from "./src/app/Notification";
 import { i18n } from "./src/app/i18n";
 import { IPC } from "./src/app/Ipc";
 import { Settings } from "./src/app/Settings";
+
+app.setAppUserModelId("fr.asdl.backyard");
 
 export class Backyard {
 
@@ -43,18 +45,18 @@ export class Backyard {
             this.window.webContents.send("lifecycle", "unmaximized");
             this.settings.set("editor.maximized", false);
         })
-
-        new AppNotification("editor.notification.test.title", "editor.notification.test.content", false, "./src/resources/icon.png", null);
-
-        app.on('window-all-closed', () => {
-            if (process.platform !== 'darwin') app.quit()
-        });
-        app.on('activate', () => {
-            if (this.window === null) this.init()
-        })
+        new AppNotification("editor.notification.test.title", "editor.notification.test.content", false, NotificationIcon.TEST);
     }
 
 }
 
 const backyard = new Backyard();
+
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+});
+app.on('activate', () => {
+    if (backyard.window === null) backyard.init()
+});
+
 app.whenReady().then(() => backyard.init());

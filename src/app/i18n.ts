@@ -1,4 +1,5 @@
 import { readFile } from "fs";
+import * as path from "path";
 
 export class i18n {
 
@@ -8,7 +9,7 @@ export class i18n {
     constructor(lang: string) {
         this.lang = lang;
         this.translation = new Map();
-        readFile(`./src/resources/locales/${lang}`, "utf8", (err, data) => {
+        readFile(path.join(__dirname, `../resources/locales/${lang}`), "utf8", (err, data) => {
             if (!err) {
                 data.split("\n").forEach((str) => {
                     const sp = str.split(/\s/)
