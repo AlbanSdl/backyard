@@ -521,10 +521,18 @@ path.tagLink {
 .tooltipIcon {
     width: 14px;
     height: 14px;
-    margin: 2px 4px 2px 0;
 }
 .commit>.tagContainer {
     padding-left: 0 !important;
+    overflow: visible;
+}
+.tooltipWrapper {
+    vertical-align: bottom;
+    display: inline-grid;
+    width: fit-content;
+    position: relative;
+    padding: 2px 0;
+    margin-right: 4px;
 }
 
 /*
@@ -541,4 +549,33 @@ path.tagLink {
 ::-webkit-scrollbar-thumb {
     background: #555;
     border-radius: 10px;
+}
+
+/* Tooltips */
+.tooltip {
+    visibility: hidden;
+    width: max-content;
+    max-width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    padding: 2px 6px;
+    border-radius: 2px;
+    position: absolute;
+    z-index: 1;
+    top: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+.tooltip::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #555 transparent;
+    pointer-events: none;
 }

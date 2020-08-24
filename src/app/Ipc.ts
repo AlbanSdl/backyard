@@ -91,12 +91,14 @@ export class IPC {
         try {
             const regexp = new RegExp("^.*\\" + sep + "(.+?)$", "mug");
             const repoName = regexp.exec(path)[1];
-            git.Repository.open(path).catch((reason) => event.reply("error", reason)).then((repo) => {
+            git.Repository.open(path).catch((reason) => event.reply("error", reason)).then((repo: git.Repository) => {
                 if (repo != null && repoName != null) {
                     this.repo = repo;
                     this.addRecent(path, repoName);
                     this.backyard.settings.set("editor.currentPath", path);
-                    event.reply("lifecycle", "openRepo", path, repoName);
+                    repo.getCurrentBranch().then((head) => {
+                        event.reply("lifecycle", "openRepo", path, repoName, head.toString());
+                    })
                 }
             });
         } catch (ex) {
@@ -119,7 +121,7 @@ export class IPC {
     private checkoutBranch(ref: string, event: Electron.IpcMainEvent) {
         this.repo.checkoutBranch(ref, {
             checkoutStrategy: git.Checkout.STRATEGY.SAFE
-        }).then(() => event.reply("lifecycle", "executed", this.getLocaleString("editor.git.checkout.complete"))).catch((err) => event.reply("error", this.getLocaleString("editor.git.checkout.error") + err));
+        }).then(() => event.reply("lifecycle", "checkout", ref, this.getLocaleString("editor.git.checkout.complete"))).catch((err) => event.reply("error", this.getLocaleString("editor.git.checkout.error") + err));
     }
 
     private addRecent(repoPath: string, repoName: string) {

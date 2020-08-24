@@ -17,6 +17,7 @@ namespace Icon {
         LABEL = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M17.63,5.84c-0.36,-0.51,-0.96,-0.84,-1.63,-0.84l-11,0.01c-1.1,0,-2,0.89,-2,1.99v10c0,1.1,0.9,1.99,2,1.99l11,0.01c0.67,0,1.27,-0.33,1.63,-0.84l4.37,-6.16l-4.37,-6.16z"/></svg>`,
         STASH = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M19,3h-14.01c-1.11,0,-1.98,0.89,-1.98,2l-0.01,14c0,1.1,0.88,2,1.99,2h14.01c1.1,0,2,-0.9,2,-2v-14c0,-1.11,-0.9,-2,-2,-2zm0,12h-4c0,1.66,-1.35,3,-3,3s-3,-1.34,-3,-3h-4.01v-10h14.01v10z"/></svg>`,
         STASH_POINT = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M12,2c-5.53,0,-10,4.47,-10,10s4.47,10,10,10s10,-4.47,10,-10s-4.47,-10,-10,-10zm5,13.59l-1.41,1.41l-3.59,-3.59l-3.59,3.59l-1.41,-1.41l3.59,-3.59l-3.59,-3.59l1.41,-1.41l3.59,3.59l3.59,-3.59l1.41,1.41l-3.59,3.59l3.59,3.59z"/></svg>`,
+        DONE = `<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path fill="#fff" d="M9,16.2l-4.2,-4.2l-1.4,1.4l5.6,5.6l12,-12l-1.4,-1.4l-10.6,10.6z"/></svg>`,
     }
 
     export function getIcon(type: Type, classes: string = "", id: string = null): string {
@@ -39,6 +40,15 @@ namespace Icon {
             }
         }
         return ret;
+    }
+
+    export function getTooltiped(type: Type, classes: string = "", content: string = "", parent?: HTMLElement) {
+        const wrapper = document.createElement("div");
+        wrapper.classList.add("tooltipWrapper");
+        const icon = new DOMParser().parseFromString(Icon.getIcon(type, classes), 'text/xml').firstElementChild;
+        wrapper.appendChild(icon);
+        if (content != "") Ascript.tooltip(wrapper, content, parent);
+        return wrapper;
     }
 
 }
@@ -384,7 +394,9 @@ class Commit {
     public attachHead(refName: string, display?: string): void {
         const refType = Reference.getType(refName);
         const tag = this.commitCache.view.createElement(`ref-${refName}`, "ref", "smooth");
-        tag.innerHTML = Icon.getIcon(refType.icon, "tooltipIcon") + (display == null ? refName.split("/").pop() : display);
+        if (this.commitCache.view.checkout === refName) tag.appendChild(Icon.getTooltiped(Icon.Type.DONE, "tooltipIcon", this.commitCache.view.getLocale("editor.git.current_head"), tag));
+        tag.appendChild(Icon.getTooltiped(refType.icon, "tooltipIcon"))
+        tag.appendChild(document.createTextNode(display == null ? refName.split("/").pop() : display));
         const color = !refType.isBranch ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
         tag.style.background = color;
         this.element.getElementsByClassName("tagContainer")[0].appendChild(tag);
@@ -442,6 +454,7 @@ class View {
     private readonly recentRepos: Array<{ name: string, path: string }>;
     public commitCache: CommitCache;
     private readonly cachedLocales: Map<string, string>;
+    public checkout: string;
 
     constructor() {
         this.isLoading = true;
@@ -545,8 +558,9 @@ class View {
         this.setLoaded(true);
     }
 
-    public loadRepository(path: string, name: string) {
+    public loadRepository(path: string, name: string, headRef: string) {
         this.setTitle(`${this.getLocale("editor.app.title")} ${this.getLocale("editor.app.title.open")} ${name}`);
+        this.checkout = headRef;
         const getActionElement = (name: string, iconType: Icon.Type, onclick = () => { }) => {
             const elem = this.createElement(null, "menuItem");
             elem.innerHTML = Icon.getIcon(iconType, "icon") + `<div class="name">${name}</div>`;
@@ -611,7 +625,10 @@ class View {
             const listElem = document.getElementById(`${match[1]}List`);
             if (listElem == null) return;
             const ref = this.createElement(`ref-menu-${refName}`, "ref", "smooth");
-            if (refType !== Reference.STASH) ref.innerText = refName.substr(match[0].length + 1);
+            if (refType !== Reference.STASH) {
+                if (refName === this.checkout) ref.appendChild(Icon.getTooltiped(Icon.Type.DONE, "tooltipIcon", this.getLocale("editor.git.current_head"), ref));
+                ref.appendChild(document.createTextNode(refName.substr(match[0].length + 1)));
+            }
             if (refType === Reference.HEAD)
                 ref.addEventListener('dblclick', () => {
                     ipcRenderer.send("lifecycle", "checkout", refName);
@@ -738,7 +755,7 @@ window.onload = () => {
         if (status === "mainMenu")
             view.loadMainMenu();
         if (status === "openRepo")
-            view.loadRepository(args[0], args[1]);
+            view.loadRepository(args[0], args[1], args[2]);
         if (status === "registerNetworkPart")
             view.registerNetworkPart(args[0], args[1]);
         if (status === "executed")
@@ -749,6 +766,10 @@ window.onload = () => {
             document.getElementById("windowIconMaximize").classList.remove("maximized");
         if (status === "updateGraph")
             view.commitCache.addAll(...args);
+        if (status === "checkout") {
+            view.checkout = args[0];
+            new Ascript.Notification(args[1]).setBackground("#2ad500").setDuration(2).send();
+        }
     });
     ipcRenderer.on("error", (event, error) => {
         new Ascript.Notification(`${Icon.getIcon(Icon.Type.ERROR, 'ic')} ${error}`).setBackground("#f00").send();

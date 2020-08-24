@@ -356,6 +356,26 @@ export namespace Ascript {
         [].forEach.call(document.getElementsByClassName(className), (elem: HTMLElement) => { Ascript.addRippleListener(elem) });
     };
 
+    export function tooltip(elem: HTMLElement, content: string, parent?: HTMLElement): void {
+        const span = document.createElement("span");
+        span.classList.add('tooltip')
+        span.innerText = content;
+        span.style.opacity = "0";
+
+        elem.addEventListener('mouseenter', () => {
+            elem.appendChild(span);
+            fadeInElement(span, "1", .2);
+        });
+        elem.addEventListener('mouseleave', () => {
+            fadeOutElement(span, true, false, .2);
+        });
+
+        if (parent != null)
+            parent.addEventListener('dragstart', () => {
+                span.style.display = "none";
+            });
+    }
+
     /**
      * Creates a svg chart with given dataset. The chart takes the width of the elementParent
      * @param elementParent {HTMLElement} the element in which the chart will be output

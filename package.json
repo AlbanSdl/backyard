@@ -18,11 +18,11 @@
   "homepage": "https://github.com/AlbanSdl/backyard#readme",
   "devDependencies": {
     "copyfiles": "^2.3.0",
-    "electron": "^9.2.0"
+    "electron": "^9.2.0",
+    "@types/nodegit": "^0.26.7",
+    "typescript": "^3.9.7"
   },
   "dependencies": {
-    "@types/nodegit": "^0.26.7",
-    "nodegit": "^0.27.0",
-    "typescript": "^3.9.7"
+    "nodegit": "^0.27.0"
   }
 }
