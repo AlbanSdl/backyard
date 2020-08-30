@@ -4,6 +4,15 @@ import { IntAllocator } from "../app/IntAllocator";
 import { EOL } from "os";
 import { Ascript } from "./ascript";
 
+/**
+ * This interface contains app-context-related methods. These methods have the
+ * same behaviour as the ones in @see View
+ */
+interface AppContext {
+    getLocale(id: string): string;
+    createElement(id: string, ...classes: Array<string>): HTMLDivElement;
+}
+
 namespace Icon {
 
     export enum Type {
@@ -42,9 +51,9 @@ namespace Icon {
         return ret;
     }
 
-    export function getTooltiped(type: Type, classes: string = "", content: string = "", parent?: HTMLElement) {
+    export function getTooltiped(type: Type, classes: string = "", content: string = "", parent?: HTMLElement, ...extraWrapperClass: Array<string>) {
         const wrapper = document.createElement("div");
-        wrapper.classList.add("tooltipWrapper");
+        wrapper.classList.add("tooltipWrapper", ...extraWrapperClass);
         const icon = new DOMParser().parseFromString(Icon.getIcon(type, classes), 'text/xml').firstElementChild;
         wrapper.appendChild(icon);
         if (content != "") Ascript.tooltip(wrapper, content, parent);
@@ -55,17 +64,177 @@ namespace Icon {
 
 namespace Reference {
 
-    export class Type {
+    export class Tag implements AppContext {
+
+        public readonly name: string;
+        public readonly type: Type;
+        public readonly displayName: string;
+        private commit: Commit;
+        private tag: HTMLDivElement;
+        private sideTag: HTMLDivElement;
+
+        public get order(): number {
+            return Number.parseInt(this.tag.style.order);
+        }
+
+        public set order(v: number) {
+            this.tag.style.order = this.sideTag.style.order = v.toString();
+        }
+
+        public get isCheckout(): boolean {
+            return this.commit.commitCache.view.checkout === this.name;
+        }
+
+        public updateCheckoutStatus(remove: boolean = true): void {
+            const el = this.tag.getElementsByClassName("checkoutWrapper");
+            const sideEl = this.sideTag.getElementsByClassName("checkoutWrapper");
+            if (remove && el.length > 0) {
+                el.item(0).remove();
+                sideEl.item(0).remove();
+            } else if (!remove && el.length === 0) {
+                this.tag.prepend(Icon.getTooltiped(Icon.Type.DONE, "tooltipIcon", this.getLocale("editor.git.current_head"), this.tag, "checkoutWrapper"));
+                this.sideTag.prepend(Icon.getTooltiped(Icon.Type.DONE, "tooltipIcon", this.getLocale("editor.git.current_head"), this.sideTag, "checkoutWrapper"));
+            }
+        }
+
+        constructor(refName: string, commit: Commit, displayName?: string) {
+            this.name = refName;
+            this.type = getType(refName);
+            this.commit = commit;
+            this.displayName = displayName;
+            REGISTRY.push(this);
+
+            /* Tag */
+            if (this.displayName == null) this.displayName = refName.split("/").pop();
+            this.tag = this.createElement(`ref-${refName}`, "ref", "smooth");
+            this.tag.appendChild(Icon.getTooltiped(this.type.icon, "tooltipIcon"))
+            this.tag.appendChild(document.createTextNode(this.displayName));
+            const color = !this.type.isBranch ? this.getLocale("editor.git.graph.color.tag") : this.commit.path.getAttribute('stroke');
+            this.tag.style.background = color;
+            this.commit.element.getElementsByClassName("tagContainer")[0].appendChild(this.tag);
+            const pos = this.commit.getPosition();
+
+            if (this.type.isApplicable()) {
+                this.tag.draggable = true;
+                this.tag.style.cursor = "grab";
+                this.tag.addEventListener('dragstart', (event) => {
+                    event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
+                    event.dataTransfer.setData(`activator/activated/${refName}`, "activator");
+                    for (const appType of this.type.getApplicableTypes())
+                        event.dataTransfer.setData(`activator/graph/${appType.getSimpleName()}`, "activator");
+                    for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                        if (!this.type.isApplicable(elem.id.slice(4)) || elem === this.tag)
+                            elem.style.opacity = .3;
+                    for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                        if (!this.type.isApplicable(Reference.getType(elem)) || elem.id.slice(9) === refName)
+                            elem.style.opacity = .3;
+                });
+                this.tag.addEventListener('dragend', () => {
+                    for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                        if (!this.type.isApplicable(elem.id.slice(4)) || elem === this.tag)
+                            elem.style.opacity = 1;
+                    for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                        if (!this.type.isApplicable(Reference.getType(elem)) || elem.id.slice(9) === refName)
+                            elem.style.opacity = 1;
+                })
+                this.tag.addEventListener('dragover', (event) => {
+                    if (event.dataTransfer.types.includes(`activator/graph/${this.type.getSimpleName()}`) &&
+                        !event.dataTransfer.types.includes(`activator/activated/${refName}`)) event.preventDefault();
+                })
+                this.tag.addEventListener('drop', (event) => {
+                    const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
+                    Reference.getType(dataFrom.ref).performOperation(this.commit, dataFrom.ref, refName);
+                });
+            }
+
+            if (this.tag.parentElement.children.length === 1) {
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const graph = document.getElementById("graphic-graph");
+                path.id = `graph-ref-${this.commit.id}`;
+                path.classList.add("tagLink");
+                path.setAttribute("stroke", color);
+                path.setAttribute("preserveAspectRatio", "xMidYMid meet");
+                path.setAttribute("d", `M ${pos.x + Commit.radius} ${pos.y} H ${this.tag.getBoundingClientRect().x - graph.getBoundingClientRect().x} Z`);
+                graph.appendChild(path);
+            }
+
+            /* Side tag */
+            if (refName !== this.type.name) {
+                const match = refName.match(/refs\/([^\/]+)/mu);
+                if (match == null || match.length < 1) return;
+                const listElem = document.getElementById(`${match[1]}List`);
+                if (listElem == null) return;
+                this.sideTag = this.createElement(`ref-menu-${refName}`, "ref", "smooth");
+                this.sideTag.style.order = this.order.toString();
+                if (this.type !== Reference.STASH)
+                    this.sideTag.appendChild(document.createTextNode(this.commit.isStash ? commit.getSummary() : refName.substr(match[0].length + 1)));
+                if (this.type === Reference.HEAD)
+                    this.sideTag.addEventListener('dblclick', () => {
+                        ipcRenderer.send("checkout", refName);
+                    });
+                listElem.appendChild(this.sideTag);
+
+                if (this.type.isApplicable()) {
+                    this.sideTag.draggable = true;
+                    this.sideTag.style.cursor = "grab";
+                    this.sideTag.addEventListener('dragstart', (event) => {
+                        event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
+                        event.dataTransfer.setData(`activator/activated/${refName}`, "activator");
+                        for (const appType of this.type.getApplicableTypes())
+                            event.dataTransfer.setData(`activator/graph/${appType.getSimpleName()}`, "activator");
+                        for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                            if (!this.type.isApplicable(Reference.getType(elem)) || elem === this.sideTag)
+                                elem.style.opacity = .3;
+                        for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                            if (!this.type.isApplicable(elem.id.slice(4)) || elem.id.slice(4) === refName)
+                                elem.style.opacity = .3;
+                    });
+                    this.sideTag.addEventListener('dragend', () => {
+                        for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
+                            if (!this.type.isApplicable(Reference.getType(elem)) || elem === this.sideTag)
+                                elem.style.opacity = 1;
+                        for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
+                            if (!this.type.isApplicable(elem.id.slice(4)) || elem.id.slice(4) === refName)
+                                elem.style.opacity = 1;
+                    })
+                    this.sideTag.addEventListener('dragover', (event) => {
+                        if (event.dataTransfer.types.includes(`activator/graph/${this.type.getSimpleName()}`) &&
+                            !event.dataTransfer.types.includes(`activator/activated/${refName}`)) event.preventDefault();
+                    })
+                    this.sideTag.addEventListener('drop', (event) => {
+                        const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
+                        Reference.getType(dataFrom.ref).performOperation(this.commit.commitCache.commits[0], dataFrom.ref, refName);
+                    });
+                }
+            }
+
+            /* General settings */
+            if (this.isCheckout) this.updateCheckoutStatus(false);
+            this.order = this.isCheckout ? 0 : this.type.order;
+        }
+
+        getLocale(id: string): string {
+            return this.commit.getLocale(id);
+        }
+
+        createElement(id: string, ...classes: string[]): HTMLDivElement {
+            return this.commit.createElement(id, ...classes);
+        }
+    }
+
+    class Type {
 
         public readonly name: string;
         public readonly icon: Icon.Type;
         public readonly isBranch: boolean;
         private readonly applicationTo: Map<Type, (context: Commit, from: string, to: string) => any> = new Map();
+        public readonly order: number;
 
-        constructor(name: string, icon: Icon.Type, isBranch: boolean) {
+        constructor(name: string, icon: Icon.Type, isBranch: boolean, order: number) {
             this.name = name;
             this.icon = icon;
             this.isBranch = isBranch;
+            this.order = order;
         }
 
         public getSimpleName(): string {
@@ -92,10 +261,10 @@ namespace Reference {
         }
     }
 
-    export const HEAD = new Type("refs/heads", Icon.Type.LAPTOP, true);
-    export const REMOTE = new Type("refs/remotes", Icon.Type.CLOUD, true);
-    export const TAG = new Type("refs/tags", Icon.Type.LABEL, false);
-    export const STASH = new Type("refs/stash", Icon.Type.STASH, false);
+    export const HEAD = new Type("refs/heads", Icon.Type.LAPTOP, true, 1);
+    export const REMOTE = new Type("refs/remotes", Icon.Type.CLOUD, true, 2);
+    export const TAG = new Type("refs/tags", Icon.Type.LABEL, false, 3);
+    export const STASH = new Type("refs/stash", Icon.Type.STASH, false, 4);
 
     /* Applications */
     HEAD.registerApplication(HEAD, (context, from, to) => {
@@ -124,6 +293,12 @@ namespace Reference {
                 || (ref instanceof HTMLElement && ref.parentElement.id.includes(refType.getSimpleName()))) return refType;
     }
 
+    export const REGISTRY: Array<Reference.Tag> = new Array();
+
+    export function getCheckedout(): Reference.Tag {
+        return REGISTRY.filter((ref) => ref.isCheckout)[0];
+    }
+
 }
 
 enum TransitionEffect {
@@ -134,7 +309,7 @@ enum TransitionEffect {
     SLIDE_BOTTOM = 0x10
 }
 
-class CommitCache {
+class CommitCache implements AppContext {
 
     public readonly view: View;
     public readonly commits: Array<Commit>;
@@ -144,6 +319,14 @@ class CommitCache {
         this.commits = [];
         this.view = view;
         this.lineAllocator = new IntAllocator();
+    }
+
+    getLocale(id: string): string {
+        return this.view.getLocale(id);
+    }
+
+    createElement(id: string, ...classes: string[]): HTMLDivElement {
+        return this.view.createElement(id, ...classes);
     }
 
     public addAll(...commits: Array<Commit>): void {
@@ -165,7 +348,7 @@ class CommitCache {
         return new Promise((resolve) => {
             const int = setInterval(() => {
                 const commit = this.getCommit(id);
-                if (commit != null && commit.element != null) {
+                if (commit != null && commit.element.parentElement != null) {
                     clearInterval(int);
                     resolve(commit);
                 }
@@ -175,7 +358,7 @@ class CommitCache {
 
 }
 
-class Commit {
+class Commit implements AppContext {
 
     public readonly commitCache: CommitCache;
     public readonly id: string;
@@ -189,9 +372,10 @@ class Commit {
     public readonly parents: Array<string>;
     public readonly isStash: boolean;
     public readonly stashId: number;
-    public element: HTMLElement;
+    public readonly element: HTMLElement;
     public commitLine: number;
     private readonly commitLineSize: number;
+    private readonly refs: Array<Reference.Tag> = new Array();
     public path: SVGPathElement;
     public static readonly radius: number = 4;
 
@@ -208,10 +392,37 @@ class Commit {
         this.parents = raw.parents;
         this.isStash = raw.isStash;
         this.stashId = raw.stashId;
-        this.element = null;
         this.commitLine = -1;
         this.commitLineSize = 20;
         this.path = null;
+
+        this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
+        const tags = this.commitCache.view.createElement(null, "tagContainer");
+        const id = this.commitCache.view.createElement(null, "id");
+        id.innerText = this.id.substr(0, 7);
+        const message = this.commitCache.view.createElement(null, "message");
+        message.innerText = this.getSummary();
+        const author = this.commitCache.view.createElement(null, "author");
+        author.innerText = this.authorName;
+        const date = this.commitCache.view.createElement(null, "date");
+        date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
+        this.element.append(tags, id, message, author, date);
+    }
+
+    getLocale(id: string): string {
+        return this.commitCache.getLocale(id);
+    }
+
+    createElement(id: string, ...classes: string[]): HTMLDivElement {
+        return this.commitCache.createElement(id, ...classes);
+    }
+
+    public get order(): number {
+        return Number.parseInt(this.element.style.order);
+    }
+
+    public set order(v: number) {
+        this.element.style.order = v.toString();
     }
 
     public getDescription(): string {
@@ -264,17 +475,6 @@ class Commit {
     }
 
     public display(): void {
-        this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
-        const tags = this.commitCache.view.createElement(null, "tagContainer");
-        const id = this.commitCache.view.createElement(null, "id");
-        id.innerText = this.id.substr(0, 7);
-        const message = this.commitCache.view.createElement(null, "message");
-        message.innerText = this.getSummary();
-        const author = this.commitCache.view.createElement(null, "author");
-        author.innerText = this.authorName;
-        const date = this.commitCache.view.createElement(null, "date");
-        date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
-        this.element.append(tags, id, message, author, date);
         document.getElementById("commit-graph").appendChild(this.element);
         this.displayGraph();
 
@@ -336,7 +536,6 @@ class Commit {
                 path.setAttribute("d", `M ${pos.x} ${pos.y - 10 * sc} ${Icon.getPath(Icon.Type.STASH_POINT, false, sc)}`);
             }
 
-
             const elem = document.getElementById("graphic-graph");
             if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize) {
                 elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
@@ -355,7 +554,7 @@ class Commit {
         }
     }
 
-    private getPosition() {
+    public getPosition() {
         return {
             x: this.element.getBoundingClientRect().left - this.element.parentElement.getBoundingClientRect().left + this.element.clientHeight / 2 + this.commitLine * this.commitLineSize,
             y: this.element.getBoundingClientRect().top - this.element.parentElement.getBoundingClientRect().top + this.element.clientHeight / 2
@@ -392,63 +591,11 @@ class Commit {
      * Register a branch head at this commit
      */
     public attachHead(refName: string, display?: string): void {
-        const refType = Reference.getType(refName);
-        const tag = this.commitCache.view.createElement(`ref-${refName}`, "ref", "smooth");
-        if (this.commitCache.view.checkout === refName) tag.appendChild(Icon.getTooltiped(Icon.Type.DONE, "tooltipIcon", this.commitCache.view.getLocale("editor.git.current_head"), tag));
-        tag.appendChild(Icon.getTooltiped(refType.icon, "tooltipIcon"))
-        tag.appendChild(document.createTextNode(display == null ? refName.split("/").pop() : display));
-        const color = !refType.isBranch ? this.commitCache.view.getLocale("editor.git.graph.color.tag") : this.path.getAttribute('stroke');
-        tag.style.background = color;
-        this.element.getElementsByClassName("tagContainer")[0].appendChild(tag);
-        const pos = this.getPosition();
-
-        if (refType.isApplicable()) {
-            tag.draggable = true;
-            tag.style.cursor = "grab";
-            tag.addEventListener('dragstart', (event) => {
-                event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
-                event.dataTransfer.setData(`activator/activated/${refName}`, "activator");
-                for (const appType of refType.getApplicableTypes())
-                    event.dataTransfer.setData(`activator/graph/${appType.getSimpleName()}`, "activator");
-                for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
-                    if (!refType.isApplicable(elem.id.slice(4)) || elem === tag)
-                        elem.style.opacity = .3;
-                for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
-                    if (!refType.isApplicable(Reference.getType(elem)) || elem.id.slice(9) === refName)
-                        elem.style.opacity = .3;
-            });
-            tag.addEventListener('dragend', () => {
-                for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
-                    if (!refType.isApplicable(elem.id.slice(4)) || elem === tag)
-                        elem.style.opacity = 1;
-                for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
-                    if (!refType.isApplicable(Reference.getType(elem)) || elem.id.slice(9) === refName)
-                        elem.style.opacity = 1;
-            })
-            tag.addEventListener('dragover', (event) => {
-                if (event.dataTransfer.types.includes(`activator/graph/${refType.getSimpleName()}`) &&
-                    !event.dataTransfer.types.includes(`activator/activated/${refName}`)) event.preventDefault();
-            })
-            tag.addEventListener('drop', (event) => {
-                const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
-                Reference.getType(dataFrom.ref).performOperation(this, dataFrom.ref, refName);
-            });
-        }
-
-        if (tag.parentElement.children.length === 1) {
-            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            const graph = document.getElementById("graphic-graph");
-            path.id = `graph-ref-${this.id}`;
-            path.classList.add("tagLink");
-            path.setAttribute("stroke", color);
-            path.setAttribute("preserveAspectRatio", "xMidYMid meet");
-            path.setAttribute("d", `M ${pos.x + Commit.radius} ${pos.y} H ${tag.getBoundingClientRect().x - graph.getBoundingClientRect().x} Z`);
-            graph.appendChild(path);
-        }
+        this.refs.push(new Reference.Tag(refName, this, display));
     }
 }
 
-class View {
+class View implements AppContext {
 
     private isLoading: boolean;
     private readonly recentRepos: Array<{ name: string, path: string }>;
@@ -594,7 +741,9 @@ class View {
         const networkList = this.createElement("networkList", "networkList", "verticalList");
         for (const ref of Reference.getTypes()) {
             const branch = this.createElement(`${ref.getSimpleName()}List`, "list");
-            branch.innerHTML = Icon.getIcon(ref.icon) + this.getLocale(`editor.git.${ref.getSimpleName()}.name`);
+            const header = this.createElement(null);
+            header.innerHTML = Icon.getIcon(ref.icon) + this.getLocale(`editor.git.${ref.getSimpleName()}.name`);
+            branch.appendChild(header);
             networkList.append(branch);
         }
         containerContents.appendChild(networkList);
@@ -618,64 +767,7 @@ class View {
     }
 
     public registerNetworkPart(refName: string, head: string): void {
-        const refType = Reference.getType(refName);
-        if (refName !== refType.name) {
-            const match = refName.match(/refs\/([^\/]+)/mu);
-            if (match == null || match.length < 1) return;
-            const listElem = document.getElementById(`${match[1]}List`);
-            if (listElem == null) return;
-            const ref = this.createElement(`ref-menu-${refName}`, "ref", "smooth");
-            if (refType !== Reference.STASH) {
-                if (refName === this.checkout) ref.appendChild(Icon.getTooltiped(Icon.Type.DONE, "tooltipIcon", this.getLocale("editor.git.current_head"), ref));
-                ref.appendChild(document.createTextNode(refName.substr(match[0].length + 1)));
-            }
-            if (refType === Reference.HEAD)
-                ref.addEventListener('dblclick', () => {
-                    ipcRenderer.send("checkout", refName);
-                });
-            listElem.appendChild(ref);
-
-            this.commitCache.getPlacedCommit(head).then((commit) => {
-                if (commit.isStash) {
-                    ref.innerText = commit.getSummary();
-                    commit.attachHead(refName, `${this.getLocale("editor.git.stash.display_name")} ${commit.stashId}`);
-                } else
-                    commit.attachHead(refName);
-            });
-
-            if (refType.isApplicable()) {
-                ref.draggable = true;
-                ref.style.cursor = "grab";
-                ref.addEventListener('dragstart', (event) => {
-                    event.dataTransfer.setData("application/backyard", JSON.stringify({ ref: refName }));
-                    event.dataTransfer.setData(`activator/activated/${refName}`, "activator");
-                    for (const appType of refType.getApplicableTypes())
-                        event.dataTransfer.setData(`activator/graph/${appType.getSimpleName()}`, "activator");
-                    for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
-                        if (!refType.isApplicable(Reference.getType(elem)) || elem === ref)
-                            elem.style.opacity = .3;
-                    for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
-                        if (!refType.isApplicable(elem.id.slice(4)) || elem.id.slice(4) === refName)
-                            elem.style.opacity = .3;
-                });
-                ref.addEventListener('dragend', () => {
-                    for (const elem of <any>document.getElementById("networkList").getElementsByClassName("ref"))
-                        if (!refType.isApplicable(Reference.getType(elem)) || elem === ref)
-                            elem.style.opacity = 1;
-                    for (const elem of <any>document.getElementById("commit-graph").getElementsByClassName("ref"))
-                        if (!refType.isApplicable(elem.id.slice(4)) || elem.id.slice(4) === refName)
-                            elem.style.opacity = 1;
-                })
-                ref.addEventListener('dragover', (event) => {
-                    if (event.dataTransfer.types.includes(`activator/graph/${refType.getSimpleName()}`) &&
-                        !event.dataTransfer.types.includes(`activator/activated/${refName}`)) event.preventDefault();
-                })
-                ref.addEventListener('drop', (event) => {
-                    const dataFrom = JSON.parse(event.dataTransfer.getData('application/backyard'));
-                    Reference.getType(dataFrom.ref).performOperation(this.commitCache.commits[0], dataFrom.ref, refName);
-                });
-            }
-        }
+        this.commitCache.getPlacedCommit(head).then(commit => commit.attachHead(refName, commit.isStash ? `${this.getLocale("editor.git.stash.display_name")} ${commit.stashId}` : null));
     }
 
     public clearView(transition: TransitionEffect = TransitionEffect.FADE | TransitionEffect.SLIDE_RIGHT): void {
@@ -751,7 +843,7 @@ const view = new View();
 window.onload = () => {
     document.getElementById("loaderText").innerText = view.getLocale("editor.app.loading");
     ipcRenderer.send("init");
-    ipcRenderer.on("lifecycle", (event, status, ...args) => {
+    ipcRenderer.on("lifecycle", (_event, status, ...args) => {
         if (status === "mainMenu")
             view.loadMainMenu();
         if (status === "openRepo")
@@ -767,11 +859,13 @@ window.onload = () => {
         if (status === "updateGraph")
             view.commitCache.addAll(...args);
         if (status === "checkout") {
+            Reference.getCheckedout().updateCheckoutStatus();
             view.checkout = args[0];
+            Reference.getCheckedout().updateCheckoutStatus(false);
             new Ascript.Notification(args[1]).setBackground("#2ad500").setDuration(2).send();
         }
     });
-    ipcRenderer.on("error", (event, error) => {
+    ipcRenderer.on("error", (_event, error) => {
         new Ascript.Notification(`${Icon.getIcon(Icon.Type.ERROR, 'ic')} ${error}`).setBackground("#f00").send();
     });
     document.getElementById("windowIconClose").addEventListener('click', () => {

@@ -1,5 +1,4 @@
 import { app, BrowserWindow } from "electron";
-import { AppNotification, NotificationIcon } from "./src/app/Notification";
 import { i18n } from "./src/app/i18n";
 import { IPC } from "./src/app/Ipc";
 import { Settings } from "./src/app/Settings";
@@ -45,7 +44,6 @@ export class Backyard {
             this.window.webContents.send("lifecycle", "unmaximized");
             this.settings.set("editor.maximized", false);
         })
-        new AppNotification("editor.notification.test.title", "editor.notification.test.content", false, NotificationIcon.TEST);
     }
 
 }

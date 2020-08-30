@@ -65,7 +65,7 @@ export class IPC {
             event.reply("lifecycle", "mainMenu");
         });
 
-        ipcMain.on("queryNetwork", this.queryNetwork);
+        ipcMain.on("queryNetwork", (event) => this.queryNetwork(event));
 
         ipcMain.on("checkout", (event, ...args) => {
             this.checkoutBranch(args[0], event);

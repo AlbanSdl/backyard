@@ -1,5 +1,19 @@
+editor.app.loading Loading Backyard
+editor.app.title Backyard
+editor.app.title.open —  
 editor.menu.title Backyard
-error.ipc.unknown_action Error: unrecognized action. This is probably a bug
+editor.menu.quickstart Quickstart
+editor.menu.quickstart.open Open repository
+editor.menu.quickstart.open.description Click to browse your files
+editor.menu.quickstart.settings Settings
+editor.menu.quickstart.settings.description Adjust the settings of Backyard
+editor.menu.recents Recently opened:
+editor.menu.recents.empty You have not opened any repository yet. Open one to see it appear here !
+editor.app.repo.choose.title Open a repository from disk
+editor.app.repo.choose.confirm Open this repository
+editor.bar.action_1 action_1
+editor.bar.action_2 action_2
+editor.bar.action.close Close repository
 editor.git.graph.color.0 #a93226
 editor.git.graph.color.1 #f4d03f
 editor.git.graph.color.2 #d35400
@@ -9,3 +23,9 @@ editor.git.graph.color.5 #f5cba7
 editor.git.graph.color.6 #aed6f1
 editor.git.graph.color.7 #dc7633
 editor.git.graph.color.tag #81bef7
+editor.git.heads.name Heads
+editor.git.remotes.name Remotes
+editor.git.tags.name Tags
+editor.git.stash.name Stashes
+editor.commit.date_format dd/MM/yyyy at hh:mm:ss
+editor.git.current_head Current head
