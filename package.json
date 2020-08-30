@@ -6,7 +6,8 @@
   "scripts": {
     "compile": "tsc && copyfiles -e src/**/*.ts src/**/* dist/",
     "start": "npm run-script compile && electron ./dist/index.js",
-    "build": "npm run-script compile && electron-builder"
+    "build": "npm run-script compile && electron-builder",
+    "test": "npm run-script compile && node ./dist/tests/main.js"
   },
   "repository": {
     "type": "git",

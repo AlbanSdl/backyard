@@ -15,15 +15,16 @@ export class IPC {
     }
 
     private init(): void {
-        ipcMain.on("lifecycle", (event, status, ...args) => {
-            if (status === "init") {
-                const repoPath = <string> this.backyard.settings.get("editor.currentPath");
+        ipcMain.on("init", (event) => {
+            const repoPath = <string> this.backyard.settings.get("editor.currentPath");
                 if (repoPath != null)
                     this.openRepository(repoPath, event);
                 else
                     event.reply("lifecycle", "mainMenu");
-            } else if (status === "queryRecents") {
-                const arr = new Array();
+        });
+
+        ipcMain.on("queryRecents", (event) => {
+            const arr = new Array();
                 for (let i = 0; i < 9; i++) {
                     const name = this.backyard.settings.get(`editor.recents.${i}.name`);
                     const path = this.backyard.settings.get(`editor.recents.${i}.path`);
@@ -33,54 +34,57 @@ export class IPC {
                     }
                 }
                 event.returnValue = arr;
-            } else if (status === "openRepoSelector") {
-                const answer = dialog.showOpenDialogSync(this.backyard.window, {
-                    title: this.backyard.i18n.getLocaleString("editor.app.repo.choose.title"),
-                    defaultPath: app.getPath("home"),
-                    buttonLabel: this.backyard.i18n.getLocaleString("editor.app.repo.choose.confirm"),
-                    properties: [
-                        "openDirectory",
-                        "showHiddenFiles",
-                        "createDirectory",
-                        "promptToCreate"
-                    ]
-                });
-                if (answer != null && answer.length > 0)
-                    this.openRepository(answer[0], event);
-            } else if (status === "loadRecent") {
-                if (args.length > 0) {
-                    this.openRepository(<string> this.backyard.settings.get(`editor.recents.${args[0]}.path`), event);
-                } else {
-                    event.reply("error", "error.load.from_recents");
-                }
-            } else if (status === "closeRepo") {
-                this.backyard.settings.delete("editor.currentPath");
-                this.repo = null;
-                event.reply("lifecycle", "mainMenu");
-            } else if (status === "queryNetwork") {
-                this.queryNetwork(event);
-            } else if (status === "checkout") {
-                this.checkoutBranch(args[0], event);
-            } else if (status === "minimizeApp") {
-                this.backyard.window.minimize();
-            } else if (status === "maximizeApp") {
-                if (this.backyard.window.isMaximized())
-                    this.backyard.window.unmaximize();
-                else
-                    this.backyard.window.maximize();
-            } else if (status === "exitApp") {
-                this.backyard.window.close();
-            } else if (status === "updateGraph") {
-                this.getCommitAndStashes(args.length > 0 ? args[0] : null).then((commits) => {
-                    event.reply("lifecycle", "updateGraph", ...commits);
-                });
-            } else
-                event.reply("error", this.getLocaleString("error.ipc.unknown_action"));
-        })
+        });
+
+        ipcMain.on("openRepoSelector", (event) => {
+            const answer = dialog.showOpenDialogSync(this.backyard.window, {
+                title: this.backyard.i18n.getLocaleString("editor.app.repo.choose.title"),
+                defaultPath: app.getPath("home"),
+                buttonLabel: this.backyard.i18n.getLocaleString("editor.app.repo.choose.confirm"),
+                properties: [
+                    "openDirectory",
+                    "showHiddenFiles",
+                    "createDirectory",
+                    "promptToCreate"
+                ]
+            });
+            if (answer != null && answer.length > 0)
+                this.openRepository(answer[0], event);
+        });
+
+        ipcMain.on("loadRecent", (event, ...args) => {
+            if (args.length > 0)
+                this.openRepository(<string> this.backyard.settings.get(`editor.recents.${args[0]}.path`), event);
+            else
+                event.reply("error", "error.load.from_recents");
+        });
+
+        ipcMain.on("closeRepo", (event) => {
+            this.backyard.settings.delete("editor.currentPath");
+            this.repo = null;
+            event.reply("lifecycle", "mainMenu");
+        });
+
+        ipcMain.on("queryNetwork", this.queryNetwork);
+
+        ipcMain.on("checkout", (event, ...args) => {
+            this.checkoutBranch(args[0], event);
+        });
+
+        ipcMain.on("minimizeApp", () => this.backyard.window.minimize());
+        ipcMain.on("maximizeApp", () => this.backyard.window.isMaximized() ? this.backyard.window.unmaximize() : this.backyard.window.maximize());
+
+        ipcMain.on("exitApp", () => this.backyard.window.close());
+
+        ipcMain.on("updateGraph", (event, ...args) => {
+            this.getCommitAndStashes(args.length > 0 ? args[0] : null).then((commits) => {
+                event.reply("lifecycle", "updateGraph", ...commits);
+            });
+        });
 
         ipcMain.on("localeString", (event, id) => {
             event.returnValue = this.getLocaleString(id);
-        })
+        });
     }
 
     protected getLocaleString(id: string): string {

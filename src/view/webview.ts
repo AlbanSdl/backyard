@@ -461,7 +461,7 @@ class View {
         this.recentRepos = new Array();
         this.commitCache = new CommitCache(this);
         this.cachedLocales = new Map();
-        const recents = ipcRenderer.sendSync("lifecycle", "queryRecents");
+        const recents = ipcRenderer.sendSync("queryRecents");
         if (recents.length != null)
             for (let i = 0; i < recents.length; i += 2)
                 this.recentRepos.push({
@@ -534,8 +534,8 @@ class View {
         const quickStartHeader = this.createElement(null, "listHeader");
         quickStartHeader.innerText = this.getLocale("editor.menu.quickstart");
         quickStartList.appendChild(quickStartHeader);
-        quickStartList.appendChild(this.createCard("card_one", Icon.Type.FOLDER, this.getLocale("editor.menu.quickstart.open"), this.getLocale("editor.menu.quickstart.open.description"), () => ipcRenderer.send("lifecycle", "openRepoSelector")));
-        quickStartList.appendChild(this.createCard("card_two", Icon.Type.SETTINGS, this.getLocale("editor.menu.quickstart.settings"), this.getLocale("editor.menu.quickstart.settings.description"), () => ipcRenderer.send("lifecycle", "undefined")));
+        quickStartList.appendChild(this.createCard("card_one", Icon.Type.FOLDER, this.getLocale("editor.menu.quickstart.open"), this.getLocale("editor.menu.quickstart.open.description"), () => ipcRenderer.send("openRepoSelector")));
+        quickStartList.appendChild(this.createCard("card_two", Icon.Type.SETTINGS, this.getLocale("editor.menu.quickstart.settings"), this.getLocale("editor.menu.quickstart.settings.description"), () => ipcRenderer.send("undefined")));
         contents.appendChild(quickStartList);
         const recentList = this.createElement("recentRepoList", "recentRepoList", "verticalList");
         const recentHeader = this.createElement(null, "listHeader");
@@ -548,7 +548,7 @@ class View {
         } else {
             this.recentRepos.forEach((repo, number) => {
                 recentList.appendChild(this.createCard(`open-${repo.name.replace(/\s/, "")}`, null, repo.name, repo.path, () => {
-                    ipcRenderer.send("lifecycle", "loadRecent", number);
+                    ipcRenderer.send("loadRecent", number);
                 }));
             });
         }
@@ -585,7 +585,7 @@ class View {
         const menuBar = this.createElement(null, "menuBar");
         menuBar.appendChild(getActionElement(this.getLocale("editor.bar.action_1"), Icon.Type.FOLDER));
         menuBar.appendChild(getActionElement(this.getLocale("editor.bar.action_2"), Icon.Type.EDIT));
-        menuBar.appendChild(getActionElement(this.getLocale("editor.bar.action.close"), Icon.Type.CLOSE, () => ipcRenderer.send("lifecycle", "closeRepo")));
+        menuBar.appendChild(getActionElement(this.getLocale("editor.bar.action.close"), Icon.Type.CLOSE, () => ipcRenderer.send("closeRepo")));
         header.appendChild(menuBar);
         appContainer.appendChild(header);
 
@@ -610,8 +610,8 @@ class View {
         appContainer.appendChild(containerContents);
 
         // request network content from ipc
-        ipcRenderer.send("lifecycle", "updateGraph");
-        ipcRenderer.send("lifecycle", "queryNetwork");
+        ipcRenderer.send("updateGraph");
+        ipcRenderer.send("queryNetwork");
 
         document.getElementsByTagName("body")[0].appendChild(appContainer);
         this.setLoaded(true);
@@ -631,7 +631,7 @@ class View {
             }
             if (refType === Reference.HEAD)
                 ref.addEventListener('dblclick', () => {
-                    ipcRenderer.send("lifecycle", "checkout", refName);
+                    ipcRenderer.send("checkout", refName);
                 });
             listElem.appendChild(ref);
 
@@ -750,7 +750,7 @@ const view = new View();
 
 window.onload = () => {
     document.getElementById("loaderText").innerText = view.getLocale("editor.app.loading");
-    ipcRenderer.send("lifecycle", "init");
+    ipcRenderer.send("init");
     ipcRenderer.on("lifecycle", (event, status, ...args) => {
         if (status === "mainMenu")
             view.loadMainMenu();
@@ -775,12 +775,12 @@ window.onload = () => {
         new Ascript.Notification(`${Icon.getIcon(Icon.Type.ERROR, 'ic')} ${error}`).setBackground("#f00").send();
     });
     document.getElementById("windowIconClose").addEventListener('click', () => {
-        ipcRenderer.send("lifecycle", "exitApp");
+        ipcRenderer.send("exitApp");
     });
     document.getElementById("windowIconMinimize").addEventListener('click', () => {
-        ipcRenderer.send("lifecycle", "minimizeApp");
+        ipcRenderer.send("minimizeApp");
     });
     document.getElementById("windowIconMaximize").addEventListener('click', () => {
-        ipcRenderer.send("lifecycle", "maximizeApp");
+        ipcRenderer.send("maximizeApp");
     })
 }
