@@ -85,12 +85,13 @@ export namespace Reference {
             if (listElem == null) return;
             this.sideTag = this.createElement(`ref-menu-${refName}`, "ref", "smooth");
             this.sideTag.appendChild(document.createTextNode(this.commit.isStash ? commit.getSummary() : refName.substr(match[0].length + 1)));
-            if (this.type === Reference.HEAD) this.sideTag.addEventListener('dblclick', () => ipcRenderer.send("checkout", refName));
             listElem.appendChild(this.sideTag);
 
             /* Drag and drop actions */
             if (this.type.isApplicable()) {
                 [this.tag, this.sideTag].forEach((tag) => {
+                    if (this.type === Reference.HEAD) 
+                        tag.addEventListener('dblclick', () => {if (!this.isCheckout) ipcRenderer.send("checkout", refName)});
                     tag.draggable = true;
                     tag.style.cursor = "grab";
                     tag.addEventListener('dragstart', (event) => {
