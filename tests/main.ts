@@ -1,5 +1,5 @@
-import { DateFormat } from "./../src/app/Date";
-import { IntAllocator } from "./../src/app/IntAllocator";
+import { DateFormat } from "../src/view/utils/Date";
+import { IntAllocator } from "../src/view/utils/IntAllocator";
 
 /**
  * Welcome to Backyard testing units. Here we test some parts of the code
