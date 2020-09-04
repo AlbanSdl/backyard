@@ -5,6 +5,7 @@ import { Icon } from "./Icons";
 import { AppContext } from "../webview";
 import { CommitCache } from "./CommitCache";
 import { TransitionEffect } from "./Transition";
+import { ResizableTable } from "./graphical/TableView";
 
 export class View implements AppContext {
 
@@ -13,6 +14,7 @@ export class View implements AppContext {
     public commitCache: CommitCache;
     private readonly cachedLocales: Map<string, string>;
     public checkout: string;
+    public commitTable: ResizableTable;
 
     constructor() {
         this.isLoading = true;
@@ -158,15 +160,7 @@ export class View implements AppContext {
             networkList.append(branch);
         }
         containerContents.appendChild(networkList);
-        const graphContainer = this.createElement(null, 'commit-graph-container');
-        const graphTempContainer = this.createElement(null, 'graph-container');
-        const graphicGraph = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        graphicGraph.id = "graphic-graph";
-        graphTempContainer.appendChild(graphicGraph);
-        const graph = this.createElement("commit-graph", "commit-graph");
-        graphTempContainer.appendChild(graph);
-        graphContainer.appendChild(graphTempContainer);
-        containerContents.appendChild(graphContainer);
+        this.commitTable = new ResizableTable(this, containerContents, "commit-graph", "commit-graph");
         appContainer.appendChild(containerContents);
 
         // request network content from ipc

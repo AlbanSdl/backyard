@@ -607,6 +607,11 @@ export namespace Ascript {
         private buttons: Map<string, Array<number | string | string[] | Function>>;
         private fadeId: string;
 
+        
+        public get element() : HTMLElement {
+            return this.elem;
+        }
+        
         /**
          * Initializes a popup
          * @param id {String} id of the popup element
@@ -807,6 +812,7 @@ export namespace Ascript {
                     Ascript.addRippleListener(button);
                 }
             }, 500);
+            this.elem = popup;
         }
 
         /**

@@ -67,9 +67,9 @@ export namespace Reference {
             this.commit.element.getElementsByClassName("tagContainer")[0].appendChild(this.tag);
             const pos = this.commit.getPosition();
 
-            if (this.tag.parentElement.children.length === 1) {
+            if (this.commit.refs.length === 0) {
                 const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                const graph = document.getElementById("graphic-graph");
+                const graph = this.commit.element.getElementsByClassName("commitGraph")[0];
                 path.id = `graph-ref-${this.commit.id}`;
                 path.classList.add("tagLink");
                 path.setAttribute("stroke", color);

@@ -4,8 +4,9 @@ import { Reference } from "./Reference";
 import { AppContext } from "../webview";
 import { CommitCache } from "../app/CommitCache";
 import { EOL } from "os";
+import { TableRow } from "../app/graphical/TableView";
 
-export class Commit implements AppContext {
+export class Commit implements AppContext, TableRow {
 
     public readonly commitCache: CommitCache;
     public readonly id: string;
@@ -22,7 +23,7 @@ export class Commit implements AppContext {
     public readonly element: HTMLElement;
     public commitLine: number;
     private readonly commitLineSize: number;
-    private readonly refs: Array<Reference.Ref> = new Array();
+    public readonly refs: Array<Reference.Ref> = new Array();
     public path: SVGPathElement;
     public static readonly radius: number = 4;
 
@@ -43,17 +44,25 @@ export class Commit implements AppContext {
         this.commitLineSize = 20;
         this.path = null;
 
-        this.element = this.commitCache.view.createElement(`commit-${this.id}`, "commit");
-        const tags = this.commitCache.view.createElement(null, "tagContainer");
-        const id = this.commitCache.view.createElement(null, "id");
+        this.element = this.createElement(`commit-${this.id}`, "commit");
+        const graphContainer = this.createElement(null, "relative-container");
+        const graph = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        graphContainer.appendChild(graph);
+        graph.classList.add("commitGraph");
+        const tags = this.createElement(null, "tagContainer");
+        const id = this.createElement(null, "id");
         id.innerText = this.id.substr(0, 7);
-        const message = this.commitCache.view.createElement(null, "message");
+        const message = this.createElement(null, "message");
         message.innerText = this.getSummary();
-        const author = this.commitCache.view.createElement(null, "author");
+        const author = this.createElement(null, "author");
         author.innerText = this.authorName;
-        const date = this.commitCache.view.createElement(null, "date");
-        date.innerText = new DateFormat(this.date).format(this.commitCache.view.getLocale("editor.commit.date_format"));
-        this.element.append(tags, id, message, author, date);
+        const date = this.createElement(null, "date");
+        date.innerText = new DateFormat(this.date).format(this.getLocale("editor.commit.date_format"));
+        this.element.append(graphContainer, tags, id, message, author, date);
+    }
+
+    toElement(): HTMLDivElement {
+        return <HTMLDivElement> this.element;
     }
 
     getLocale(id: string): string {
@@ -122,7 +131,7 @@ export class Commit implements AppContext {
     }
 
     public display(): void {
-        document.getElementById("commit-graph").appendChild(this.element);
+        this.commitCache.view.commitTable.appendRow(this);
         this.displayGraph();
 
         if (this.isStash)
@@ -166,7 +175,7 @@ export class Commit implements AppContext {
                 const radius = Commit.radius;
                 let dPath = "";
                 for (let children of this.getChildren()) {
-                    const childPos = children.getPosition();
+                    const childPos = children.getPosition(this.element);
                     if (children.commitLine === this.commitLine) dPath += `M ${pos.x} ${pos.y - radius} V ${childPos === pos ? childPos.y - radius : childPos.y + radius}`;
                     else if (children.isBranchHeadMerge() || (this.isBranchSplit() && children.isBranchUpdate())) {
                         dPath += `M ${pos.x} ${pos.y - radius} V ${childPos.y + this.element.clientHeight - radius} Q ${pos.x} ${childPos.y} ${pos.x + (this.commitLineSize - radius) * (this.commitLine > children.commitLine ? -1 : 1)} ${childPos.y} H ${childPos.x + (this.commitLine > children.commitLine ? 1 : -1) * radius}`;
@@ -183,28 +192,28 @@ export class Commit implements AppContext {
                 path.setAttribute("d", `M ${pos.x} ${pos.y - 10 * sc} ${Icon.getPath(Icon.Type.STASH_POINT, false, sc)}`);
             }
 
-            const elem = document.getElementById("graphic-graph");
-            if (elem.style.maxWidth == "" || Number.parseFloat(elem.style.maxWidth.substr(0, elem.style.maxWidth.length - 2)) < (this.commitLine + 1) * this.commitLineSize) {
-                elem.style.maxWidth = `${(this.commitLine + 1) * this.commitLineSize}px`;
-                for (const child of <any>elem.children) {
-                    if (child.id.includes("ref")) {
-                        const d = child.getAttribute("d");
-                        const reg = /H\s?(\d*)/ui;
-                        const res = d.match(reg);
-                        child.setAttribute("d", d.replace(reg, `H ${Number.parseFloat(res.length > 1 ? res[1] : "0") + this.commitLineSize}`));
-                    }
-                }
+            const graph = <SVGElement> this.element.getElementsByClassName("commitGraph")[0];
+            graph.appendChild(path);
+            
+            const graphHead = <HTMLElement> this.commitCache.view.commitTable.head.toElement().getElementsByClassName("relative-container")[0];
+            const maxWidth = getComputedStyle(graphHead).maxWidth;
+            const substr = maxWidth.match(/\d+/mug);
+            let currWidth = substr != null && substr.length > 0 ? Number.parseFloat(substr[0]) : 0;
+            if (currWidth < this.commitLineSize * (this.commitLine + 1)) graphHead.style.width = graphHead.style.maxWidth = currWidth + this.commitLineSize + "px";
+            for (const child of <any>this.element.parentElement.getElementsByClassName("tagLink")) {
+                const d = child.getAttribute("d");
+                const reg = /H\s?(\d*)/ui;
+                const res = d.match(reg);
+                if (Number.parseFloat(res.length > 1 ? res[1] : "0") < currWidth) child.setAttribute("d", d.replace(reg, `H ${currWidth + this.commitLineSize}`));
             }
-            elem.appendChild(path);
-
             this.path = path;
         }
     }
 
-    public getPosition() {
+    public getPosition(origin: HTMLElement = this.element) {
         return {
-            x: this.element.getBoundingClientRect().left - this.element.parentElement.getBoundingClientRect().left + this.element.clientHeight / 2 + this.commitLine * this.commitLineSize,
-            y: this.element.getBoundingClientRect().top - this.element.parentElement.getBoundingClientRect().top + this.element.clientHeight / 2
+            x: Commit.radius * 2 + this.commitLine * this.commitLineSize,
+            y: this.element.clientHeight / 2 + this.element.getBoundingClientRect().top - origin.getBoundingClientRect().top
         }
     }
 

@@ -461,48 +461,51 @@ to{transform:rotate(359deg)}
     overflow-x: hidden;
     flex: 4 2 500px;
 }
-.graph-container {
-    display: grid;
-    grid-template-columns: min-content;
-    width: fit-content;
-}
 .commit-graph {
     display: table;
-    table-layout: auto;
+    table-layout: fixed;
     min-width: 500px;
     white-space: nowrap;
     text-overflow: ellipsis;
-    grid-column: 3;
-    grid-row: 1;
+    width: 100%;
 }
 .commit-graph>.commit {
     display: table-row;
+    border-radius: 2px;
 }
-.commit-graph>.commit>*{
+.commit-graph>.commit:nth-child(2n) {
+    background-color: #13123d;
+}
+.commit-graph>.commit>*:not(:nth-child(1)) {
     display: table-cell;
-    padding: 2px 10px;
-    overflow: hidden;
+    padding: 0 10px 2px 10px;
     white-space: nowrap;
     text-overflow: ellipsis;
+}
+.commit-graph>.commit>*:not(:nth-child(1)):not(.tagContainer) {
+    overflow: hidden;
+}
+.relative-container {
+    display: table-cell;
+    position: relative;
+}
+.commitGraph {
+    position: relative;
+    overflow: visible;
+    height: 16px;
+    z-index: 0;
+    padding-left: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+svg.commitGraph>path {
+    fill: none;
 }
 .commit-graph>.commit>.message {
     max-width: 50ch;
 }
 .commit-graph>.commit>.date {
     max-width: 20ch;
-}
-#graphic-graph {
-    position: relative;
-    display: block;
-    height: 100%;
-    grid-column: 2;
-    grid-row: 1;
-    min-width: 20px;
-    overflow: auto;
-    z-index: -1;
-}
-#graphic-graph>path {
-    fill: none;
 }
 .tagContainer>.ref {
     padding: 0 6px;
@@ -511,6 +514,7 @@ to{transform:rotate(359deg)}
     display: inline-flex;
     margin: 0 2px;
     user-select: none;
+    vertical-align: bottom;
 }
 path.tagLink {
     stroke-width: 1px;
@@ -536,6 +540,24 @@ path.tagLink {
     padding: 2px 0;
     margin-right: 4px;
 }
+.table-header {
+    display: table-column-group;
+}
+.table-header-cnt {
+    display: table-column;
+    min-width: 60px;
+}
+.table-header-cnt.id, .table-header-cnt.author {
+    max-width: 100px;
+    width: 100px;
+}
+.table-header-cnt.date {
+    max-width: 200px;
+    width: 200px;
+}
+.table-header-cnt.relative-container {
+    min-width: 20px;
+}
 
 /*
  * General improvements
@@ -551,6 +573,12 @@ path.tagLink {
 ::-webkit-scrollbar-thumb {
     background: #555;
     border-radius: 10px;
+}
+.resizer {
+    border-right: none;
+}
+.resizer:hover {
+    border-right: 2px solid tomato;
 }
 
 /* Tooltips */
