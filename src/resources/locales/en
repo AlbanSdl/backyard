@@ -29,3 +29,4 @@ editor.git.tags.name Tags
 editor.git.stash.name Stashes
 editor.commit.date_format dd/MM/yyyy at hh:mm:ss
 editor.git.current_head Current head
+editor.git.stash.display_name Stash

@@ -192,7 +192,7 @@ export class View implements AppContext {
         const cached = this.cachedLocales.get(string_id);
         if (cached == null)
             this.cachedLocales.set(string_id, ipcRenderer.sendSync("localeString", string_id))
-        return cached != null ? cached : this.cachedLocales.get(string_id);
+        return cached ?? this.cachedLocales.get(string_id);
     }
 
     public mergeElements(ref_from: string, ref_to: string): void {
